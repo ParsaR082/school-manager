@@ -21,44 +21,69 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🏗️ AdminLayout useEffect triggered for path:', pathname);
+    
     const getUser = async () => {
       try {
+        console.log('🔍 AdminLayout: Getting user...');
         const { data: { user } } = await supabase.auth.getUser();
         
-        if (user && user.user_metadata?.role === 'admin') {
+        console.log('🔍 AdminLayout: User data:', user);
+        
+        if (user) {
+          console.log('✅ AdminLayout: Valid user found');
           setAdminUser({
             email: user.email || '',
-            full_name: user.user_metadata?.full_name || 'مدیر سیستم'
+            full_name: user.user_metadata?.full_name || user.email || 'کاربر سیستم'
           });
         } else {
-          router.push('/admin/login');
+          console.log('❌ AdminLayout: No user found');
         }
       } catch (error) {
-        console.error('Error getting user:', error);
-        router.push('/admin/login');
+        console.error('❌ AdminLayout: Error getting user:', error);
       } finally {
+        console.log('🏁 AdminLayout: Setting loading to false');
         setLoading(false);
       }
     };
 
     getUser();
-  }, [router]);
+  }, []); // Only run once on mount, not on pathname changes
 
   const handleLogout = async () => {
     try {
+      console.log('🚪 AdminLayout: Logging out...');
       await supabase.auth.signOut();
+      console.log('✅ AdminLayout: Signed out, redirecting to login');
       router.push('/admin/login');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('❌ AdminLayout: Error signing out:', error);
     }
   };
 
+  console.log('🏗️ AdminLayout render - loading:', loading, 'adminUser:', adminUser);
+
   if (loading) {
+    console.log('⏳ AdminLayout: Showing loading state');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 persian-text">در حال بارگذاری...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if user is not authenticated or not admin
+  if (!adminUser) {
+    console.log('❌ AdminLayout: No admin user found, redirecting to login');
+    router.push('/admin/login');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 persian-text">در حال انتقال به صفحه ورود...</p>
         </div>
       </div>
     );

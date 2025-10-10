@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -17,28 +18,46 @@ export default function AdminLogin() {
     setError('');
 
     try {
+      console.log('🔐 Attempting login with:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('🔐 Login response:', { data, error });
+
       if (error) {
+        console.error('❌ Login error:', error);
         setError('ایمیل یا رمز عبور اشتباه است');
         return;
       }
 
-      // بررسی نقش کاربر از metadata
-      const userMetadata = data.user.user_metadata || {};
-      const userRole = userMetadata.role;
+      if (!data.user) {
+        console.error('❌ No user in response');
+        setError('خطا در احراز هویت');
+        return;
+      }
 
+      console.log('✅ User logged in:', data.user);
+      console.log('🔍 User metadata:', data.user.user_metadata);
+
+      // Check if user has admin role
+      const userRole = data.user.user_metadata?.role;
+      console.log('👤 User role:', userRole);
+      
       if (userRole !== 'admin') {
-        await supabase.auth.signOut();
+        console.error('❌ User is not admin:', userRole);
         setError('شما مجوز دسترسی به پنل مدیریت را ندارید');
         return;
       }
 
+      console.log('🚀 Redirecting to admin panel...');
+      // Use Next.js router for proper navigation
       router.push('/admin');
+      router.refresh();
     } catch (err) {
+      console.error('❌ Catch error:', err);
       setError('خطا در ورود به سیستم');
     } finally {
       setLoading(false);
@@ -122,12 +141,12 @@ export default function AdminLogin() {
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            <a
+            <Link
               href="/"
               className="text-sm text-gray-600 hover:text-gray-900 transition-colors persian-text"
             >
               بازگشت به صفحه اصلی
-            </a>
+            </Link>
           </div>
         </div>
 
