@@ -1,36 +1,156 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# سیستم مدیریت مدرسه
 
-## Getting Started
+یک سیستم جامع برای مدیریت مدرسه با قابلیت‌های مدیریت دانش‌آموزان، نمرات و ارتباط با والدین.
 
-First, run the development server:
+## ویژگی‌های سیستم
 
+### پنل مدیریت
+- ✅ مدیریت کلاس‌ها (ایجاد، ویرایش، حذف)
+- ✅ مدیریت دروس (ایجاد، ویرایش، حذف)
+- ✅ مدیریت دانش‌آموزان (ایجاد، ویرایش، حذف)
+- ✅ مدیریت نمرات (ایجاد، ویرایش، حذف، فیلتر بر اساس کلاس)
+- ✅ گزارش‌گیری و آمار نمرات
+
+### پنل والدین
+- ✅ ورود با کد ملی و شماره تلفن
+- ✅ مشاهده نمرات فرزند
+- ✅ نمایش میانگین ماهانه و کلی
+- ✅ آمار عملکرد تحصیلی
+
+## تکنولوژی‌های استفاده شده
+
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **Form Management**: React Hook Form + Zod
+- **UI Components**: Headless UI, Heroicons
+- **Styling**: Tailwind CSS
+
+## پیش‌نیازها
+
+- Node.js (نسخه 18 یا بالاتر)
+- npm یا yarn
+- حساب کاربری Supabase
+
+## راه‌اندازی پروژه
+
+### 1. کلون کردن پروژه
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd school-management
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. نصب وابستگی‌ها
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. تنظیم متغیرهای محیطی
+فایل `.env.local` را در ریشه پروژه ایجاد کنید:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Learn More
+### 4. راه‌اندازی پایگاه داده
 
-To learn more about Next.js, take a look at the following resources:
+#### 4.1. ایجاد پروژه در Supabase
+1. به [supabase.com](https://supabase.com) بروید
+2. پروژه جدید ایجاد کنید
+3. URL و Anon Key را کپی کنید
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+#### 4.2. اجرای اسکریپت‌های پایگاه داده
+1. وارد پنل Supabase شوید
+2. به بخش SQL Editor بروید
+3. محتوای فایل `database/schema.sql` را کپی و اجرا کنید
+4. سپس محتوای فایل `database/sample-data.sql` را اجرا کنید
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 5. اجرای پروژه
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+پروژه در آدرس `http://localhost:3000` در دسترس خواهد بود.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ساختار پروژه
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+school-management/
+├── src/
+│   ├── app/                    # صفحات و API routes
+│   │   ├── admin/             # پنل مدیریت
+│   │   │   ├── classes/       # مدیریت کلاس‌ها
+│   │   │   ├── subjects/      # مدیریت دروس
+│   │   │   ├── students/      # مدیریت دانش‌آموزان
+│   │   │   └── grades/        # مدیریت نمرات
+│   │   ├── parent/            # پنل والدین
+│   │   │   ├── login/         # ورود والدین
+│   │   │   └── dashboard/     # داشبورد والدین
+│   │   └── api/               # API endpoints
+│   │       ├── auth/          # احراز هویت
+│   │       └── student/       # عملیات دانش‌آموزان
+│   ├── components/            # کامپوننت‌های قابل استفاده مجدد
+│   ├── lib/                   # کتابخانه‌ها و تنظیمات
+│   └── types/                 # تعریف انواع TypeScript
+├── database/                  # اسکریپت‌های پایگاه داده
+│   ├── schema.sql            # ساختار جداول
+│   └── sample-data.sql       # داده‌های نمونه
+└── public/                   # فایل‌های استاتیک
+```
+
+## API Endpoints
+
+### احراز هویت والدین
+- `POST /api/auth/parent` - ورود والدین با کد ملی و شماره تلفن
+
+### مدیریت دانش‌آموزان
+- `GET /api/student/grades` - دریافت نمرات دانش‌آموز
+
+## داده‌های نمونه
+
+پس از اجرای اسکریپت‌های پایگاه داده، داده‌های نمونه زیر در دسترس خواهند بود:
+
+### والدین نمونه
+| نام کامل | کد ملی | شماره تلفن |
+|----------|---------|------------|
+| احمد محمدی | 1234567890 | 09123456789 |
+| فاطمه احمدی | 1234567891 | 09123456790 |
+| علی رضایی | 1234567892 | 09123456791 |
+
+### دانش‌آموزان نمونه
+| نام دانش‌آموز | کلاس | والد |
+|---------------|-------|------|
+| محمد احمدی | سوم ابتدایی | احمد محمدی |
+| زهرا احمدی | دوم ابتدایی | فاطمه احمدی |
+| حسین رضایی | اول ابتدایی | علی رضایی |
+
+## امکانات آینده
+
+- [ ] سیستم پیام‌رسانی بین معلم و والدین
+- [ ] گزارش‌گیری پیشرفته
+- [ ] تقویم مدرسه
+- [ ] مدیریت حضور و غیاب
+- [ ] سیستم اعلانات
+
+## مشارکت در پروژه
+
+برای مشارکت در این پروژه:
+
+1. پروژه را Fork کنید
+2. شاخه جدید ایجاد کنید (`git checkout -b feature/amazing-feature`)
+3. تغییرات را Commit کنید (`git commit -m 'Add some amazing feature'`)
+4. به شاخه Push کنید (`git push origin feature/amazing-feature`)
+5. Pull Request ایجاد کنید
+
+## مجوز
+
+این پروژه تحت مجوز MIT منتشر شده است.
+
+## پشتیبانی
+
+در صورت بروز مشکل یا سوال، لطفاً Issue جدید ایجاد کنید.
+
+---
+
+**نکته**: این پروژه برای اهداف آموزشی و نمونه‌سازی طراحی شده است. برای استفاده در محیط تولید، تنظیمات امنیتی اضافی مورد نیاز است.
