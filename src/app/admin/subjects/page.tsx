@@ -5,16 +5,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
-import type { Subject } from '@/lib/types';
+import type { Subject, Class, SubjectClass } from '@/lib/types';
 
 const subjectSchema = z.object({
   name: z.string().min(1, 'نام درس الزامی است'),
+  class_ids: z.array(z.string()).min(1, 'انتخاب حداقل یک کلاس الزامی است'),
 });
 
 type SubjectFormData = z.infer<typeof subjectSchema>;
 
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [subjectClasses, setSubjectClasses] = useState<SubjectClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
@@ -23,12 +26,17 @@ export default function SubjectsPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SubjectFormData>({
     resolver: zodResolver(subjectSchema),
+    defaultValues: {
+      name: '',
+      class_ids: [],
+    },
   });
 
-  // Fetch subjects
+  // Fetch subjects, classes, and subject-class relationships
   const fetchSubjects = async () => {
     try {
       const response = await fetch('/api/subjects');
@@ -44,13 +52,43 @@ export default function SubjectsPage() {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch('/api/classes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch classes');
+      }
+      const data = await response.json();
+      setClasses(data || []);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    }
+  };
+
+  const fetchSubjectClasses = async () => {
+    try {
+      const response = await fetch('/api/subject-classes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subject-classes');
+      }
+      const data = await response.json();
+      setSubjectClasses(data || []);
+    } catch (error) {
+      console.error('Error fetching subject-classes:', error);
+    }
+  };
+
   useEffect(() => {
     fetchSubjects();
+    fetchClasses();
+    fetchSubjectClasses();
   }, []);
 
   // Handle form submission
   const onSubmit = async (data: SubjectFormData) => {
     try {
+      let subjectId: string;
+
       if (editingSubject) {
         // Update existing subject
         const response = await fetch('/api/subjects', {
@@ -63,6 +101,16 @@ export default function SubjectsPage() {
 
         if (!response.ok) {
           throw new Error('Failed to update subject');
+        }
+
+        subjectId = editingSubject.id;
+
+        // Remove existing subject-class relationships
+        const existingRelations = subjectClasses.filter(sc => sc.subject_id === subjectId);
+        for (const relation of existingRelations) {
+          await fetch(`/api/subject-classes?id=${relation.id}`, {
+            method: 'DELETE',
+          });
         }
       } else {
         // Create new subject
@@ -77,9 +125,24 @@ export default function SubjectsPage() {
         if (!response.ok) {
           throw new Error('Failed to create subject');
         }
+
+        const newSubject = await response.json();
+        subjectId = newSubject.id;
+      }
+
+      // Create new subject-class relationships
+      for (const classId of data.class_ids) {
+        await fetch('/api/subject-classes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ subject_id: subjectId, class_id: classId }),
+        });
       }
 
       await fetchSubjects();
+      await fetchSubjectClasses();
       setIsModalOpen(false);
       setEditingSubject(null);
       reset();
@@ -110,14 +173,26 @@ export default function SubjectsPage() {
   // Handle edit
   const handleEdit = (subject: Subject) => {
     setEditingSubject(subject);
-    reset({ name: subject.name });
+    
+    // Get class IDs for this subject
+    const subjectClassIds = subjectClasses
+      .filter(sc => sc.subject_id === subject.id)
+      .map(sc => sc.class_id);
+    
+    reset({ 
+      name: subject.name,
+      class_ids: subjectClassIds
+    });
     setIsModalOpen(true);
   };
 
   // Handle add new
   const handleAddNew = () => {
     setEditingSubject(null);
-    reset({ name: '' });
+    reset({ 
+      name: '',
+      class_ids: []
+    });
     setIsModalOpen(true);
   };
 
@@ -156,6 +231,9 @@ export default function SubjectsPage() {
                   نام درس
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                  کلاس‌های تخصیص یافته
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
                   تاریخ ایجاد
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
@@ -166,23 +244,45 @@ export default function SubjectsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {subjects.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-4 text-center text-gray-500 persian-text">
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500 persian-text">
                     هیچ درسی یافت نشد
                   </td>
                 </tr>
               ) : (
-                subjects.map((subject) => (
-                  <tr key={subject.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
-                      {subject.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(subject.created_at).toLocaleDateString('fa-IR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2 space-x-reverse">
-                        <button
-                          onClick={() => handleEdit(subject)}
+                subjects.map((subject) => {
+                  const assignedClasses = subjectClasses
+                    .filter(sc => sc.subject_id === subject.id)
+                    .map(sc => classes.find(c => c.id === sc.class_id)?.name)
+                    .filter(Boolean);
+
+                  return (
+                    <tr key={subject.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
+                        {subject.name}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 persian-text">
+                        {assignedClasses.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {assignedClasses.map((className, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {className}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">هیچ کلاسی تخصیص نیافته</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(subject.created_at).toLocaleDateString('fa-IR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2 space-x-reverse">
+                          <button
+                            onClick={() => handleEdit(subject)}
                           className="text-blue-600 hover:text-blue-900 persian-text"
                         >
                           ویرایش
@@ -196,7 +296,8 @@ export default function SubjectsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -225,6 +326,32 @@ export default function SubjectsPage() {
                     {errors.name && (
                       <p className="mt-1 text-sm text-red-600 persian-text">
                         {errors.name.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 persian-text mb-2">
+                      انتخاب کلاس‌ها
+                    </label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
+                      {classes.map((classItem) => (
+                        <label key={classItem.id} className="flex items-center space-x-2 space-x-reverse">
+                          <input
+                            type="checkbox"
+                            value={classItem.id}
+                            {...register('class_ids')}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700 persian-text">
+                            {classItem.name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {errors.class_ids && (
+                      <p className="mt-1 text-sm text-red-600 persian-text">
+                        {errors.class_ids.message}
                       </p>
                     )}
                   </div>

@@ -49,7 +49,7 @@ export default function StudentsPage() {
         throw new Error('Failed to fetch students');
       }
       const data = await response.json();
-      setStudents(data || []);
+      setStudents(data);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -65,7 +65,7 @@ export default function StudentsPage() {
         throw new Error('Failed to fetch classes');
       }
       const data = await response.json();
-      setClasses(data || []);
+      setClasses(data);
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
@@ -246,7 +246,7 @@ export default function StudentsPage() {
                         {student.national_id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
-                        {student.class?.name}
+                        {student.class?.name || 'کلاس تخصیص نیافته'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
                         {student.parent?.full_name}

@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
-import type { Grade, Student, Subject } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+import type { Grade, Student, Subject, Class } from '@/lib/types';
 import { PERSIAN_MONTHS } from '@/lib/types';
 
 const gradeSchema = z.object({
@@ -27,6 +28,7 @@ export default function GradesPage() {
   const [grades, setGrades] = useState<GradeWithDetails[]>([]);
   const [students, setStudents] = useState<(Student & { class?: Class })[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectClasses, setSubjectClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<GradeWithDetails | null>(null);
@@ -49,6 +51,20 @@ export default function GradesPage() {
   });
 
   const selectedStudentId = watch('student_id');
+
+  // Get the selected student's class
+  const selectedStudent = students.find(student => student.id === selectedStudentId);
+  const selectedStudentClassId = selectedStudent?.class_id;
+
+  // Filter subjects based on selected student's class
+  const filteredSubjects = selectedStudentClassId 
+    ? subjects.filter(subject => {
+        // Check if this subject is assigned to the student's class
+        return subjectClasses.some(sc => 
+          sc.subject_id === subject.id && sc.class_id === selectedStudentClassId
+        );
+      })
+    : [];
 
   // Fetch grades
   const fetchGrades = async () => {
@@ -109,9 +125,23 @@ export default function GradesPage() {
     }
   };
 
+  // Fetch subject-class relationships
+  const fetchSubjectClasses = async () => {
+    try {
+      const response = await fetch('/api/subject-classes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subject-classes');
+      }
+      const data = await response.json();
+      setSubjectClasses(data || []);
+    } catch (error) {
+      console.error('Error fetching subject-classes:', error);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([fetchGrades(), fetchStudents(), fetchSubjects(), fetchClasses()]);
+      await Promise.all([fetchGrades(), fetchStudents(), fetchSubjects(), fetchClasses(), fetchSubjectClasses()]);
       setLoading(false);
     };
     loadData();
@@ -401,7 +431,7 @@ export default function GradesPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">انتخاب درس</option>
-                      {subjects.map((subject) => (
+                      {filteredSubjects.map((subject) => (
                         <option key={subject.id} value={subject.id}>
                           {subject.name}
                         </option>

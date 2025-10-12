@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 export async function POST(request: NextRequest) {
   try {
     // Get the access token from cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const accessToken = cookieStore.get('sb-access-token')?.value;
 
     if (accessToken) {

@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const accessToken = cookieStore.get('sb-access-token')?.value;
     const refreshToken = cookieStore.get('sb-refresh-token')?.value;
 
@@ -44,6 +44,24 @@ export async function GET(request: NextRequest) {
     }
 
     const user = sessionData.user;
+    if (!user) {
+      // Clear cookies if no user
+      const response = NextResponse.json(
+        { 
+          authenticated: false, 
+          error: 'کاربر یافت نشد',
+          user: null 
+        },
+        { status: 401 }
+      );
+
+      response.cookies.set('sb-access-token', '', { maxAge: 0, path: '/' });
+      response.cookies.set('sb-refresh-token', '', { maxAge: 0, path: '/' });
+      response.cookies.set('user-info', '', { maxAge: 0, path: '/' });
+
+      return response;
+    }
+    
     const userRole = user.user_metadata?.role;
 
     // Check if user has admin role

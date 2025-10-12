@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Set secure cookies for session management
     if (authData.session) {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       
       // Set access token cookie
       response.cookies.set('sb-access-token', authData.session.access_token, {
