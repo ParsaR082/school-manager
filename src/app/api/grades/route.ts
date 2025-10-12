@@ -7,7 +7,7 @@ export async function GET() {
       .from('grades')
       .select(`
         *,
-        student:students(id, name),
+        student:students(id, full_name),
         subject:subjects(id, name)
       `)
       .order('created_at', { ascending: false });
@@ -27,14 +27,28 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, subject_id, grade, exam_type, exam_date } = body;
+    const { student_id, subject_id, month, school_year, score } = body;
+
+    if (!student_id || !subject_id || !month || !school_year || score === undefined) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
 
     const { data, error } = await supabaseAdmin
       .from('grades')
-      .insert([{ student_id, subject_id, grade, exam_type, exam_date }])
+      .insert([{ 
+        student_id, 
+        subject_id, 
+        month, 
+        school_year, 
+        score,
+        created_by: '00000000-0000-0000-0000-000000000000' // Default admin user
+      }])
       .select(`
         *,
-        student:students(id, name),
+        student:students(id, full_name),
         subject:subjects(id, name)
       `)
       .single();
@@ -54,15 +68,22 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, student_id, subject_id, grade, exam_type, exam_date } = body;
+    const { id, student_id, subject_id, month, school_year, score } = body;
+
+    if (!id || !student_id || !subject_id || !month || !school_year || score === undefined) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
 
     const { data, error } = await supabaseAdmin
       .from('grades')
-      .update({ student_id, subject_id, grade, exam_type, exam_date })
+      .update({ student_id, subject_id, month, school_year, score })
       .eq('id', id)
       .select(`
         *,
-        student:students(id, name),
+        student:students(id, full_name),
         subject:subjects(id, name)
       `)
       .single();
