@@ -1,118 +1,82 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(req: NextRequest) {
-  // Skip middleware for static files and API routes
-  if (req.nextUrl.pathname.startsWith('/_next') || 
-      req.nextUrl.pathname.startsWith('/api') ||
-      req.nextUrl.pathname.includes('.')) {
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  console.log('🔍 Middleware called for:', pathname);
+
+  // Skip middleware for API routes, static files, and non-admin paths
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/public/') ||
+    !pathname.startsWith('/admin')
+  ) {
     return NextResponse.next();
   }
 
-  console.log('🔍 Middleware called for:', req.nextUrl.pathname);
-  
-  let res = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
-  });
+  console.log('🔍 Admin path detected:', pathname);
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: Record<string, unknown>) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          res = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          });
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: Record<string, unknown>) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          res = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          });
-          res.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-        },
-      },
-    }
-  );
-
-  // بررسی مسیرهای ادمین
-  if (req.nextUrl.pathname.startsWith('/admin')) {
-    console.log('🔍 Admin path detected:', req.nextUrl.pathname);
-    
-    // اگر صفحه لاگین ادمین است، اجازه دسترسی بده
-    if (req.nextUrl.pathname === '/admin/login') {
-      console.log('✅ Login page, allowing access');
-      return res;
-    }
-
-    try {
-      // بررسی وضعیت احراز هویت
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('🔐 Session check:', { 
-        hasSession: !!session, 
-        sessionError: sessionError?.message,
-        userId: session?.user?.id 
-      });
-
-      if (!session || sessionError) {
-        console.log('❌ No valid session, redirecting to login');
-        return NextResponse.redirect(new URL('/admin/login', req.url));
-      }
-
-      // بررسی وجود کاربر
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      console.log('👤 User check:', { 
-        hasUser: !!user?.user, 
-        userError: userError?.message,
-        userEmail: user?.user?.email 
-      });
-
-      if (userError || !user?.user) {
-        console.log('❌ User error, redirecting to login');
-        return NextResponse.redirect(new URL('/admin/login', req.url));
-      }
-
-      console.log('✅ User access granted');
-      return res;
-    } catch (error) {
-      console.log('❌ Middleware error:', error);
-      return NextResponse.redirect(new URL('/admin/login', req.url));
-    }
+  // Allow access to login page
+  if (pathname === '/admin/login') {
+    console.log('✅ Login page, allowing access');
+    return NextResponse.next();
   }
 
-  console.log('✅ Non-admin path, allowing access');
-  return res;
+  // Check for authentication cookies
+  const accessToken = request.cookies.get('sb-access-token')?.value;
+  const refreshToken = request.cookies.get('sb-refresh-token')?.value;
+  const userInfo = request.cookies.get('user-info')?.value;
+
+  if (!accessToken || !refreshToken || !userInfo) {
+    console.log('❌ No auth cookies found, redirecting to login');
+    return NextResponse.redirect(new URL('/admin/login', request.url));
+  }
+
+  try {
+    // Parse user info from cookie
+    const user = JSON.parse(decodeURIComponent(userInfo));
+    
+    // Check if user has admin role
+    if (user.role !== 'admin') {
+      console.log('❌ User is not admin, redirecting to login');
+      
+      // Clear invalid cookies
+      const response = NextResponse.redirect(new URL('/admin/login', request.url));
+      response.cookies.set('sb-access-token', '', { maxAge: 0, path: '/' });
+      response.cookies.set('sb-refresh-token', '', { maxAge: 0, path: '/' });
+      response.cookies.set('user-info', '', { maxAge: 0, path: '/' });
+      
+      return response;
+    }
+
+    console.log('✅ Admin user authenticated, allowing access');
+    return NextResponse.next();
+
+  } catch (error) {
+    console.error('❌ Error parsing user info cookie:', error);
+    
+    // Clear invalid cookies
+    const response = NextResponse.redirect(new URL('/admin/login', request.url));
+    response.cookies.set('sb-access-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('sb-refresh-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('user-info', '', { maxAge: 0, path: '/' });
+    
+    return response;
+  }
 }
 
 export const config = {
-  matcher: ['/admin/:path*']
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 };

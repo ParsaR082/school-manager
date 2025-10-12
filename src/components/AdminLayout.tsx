@@ -3,68 +3,73 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { verifyAuth, logoutUser, getUserFromCookie, isAuthenticated } from '@/lib/auth-client';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
-interface AdminUser {
+interface AuthUser {
+  id: string;
   email: string;
+  role: string;
   full_name: string;
 }
 
 const AdminLayout = ({ children }: AdminLayoutProps) => {
   const pathname = usePathname();
   const router = useRouter();
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🏗️ AdminLayout useEffect triggered for path:', pathname);
-    
-    const getUser = async () => {
+    const checkAuth = async () => {
       try {
-        console.log('🔍 AdminLayout: Getting user...');
-        const { data: { user } } = await supabase.auth.getUser();
+        // First check client-side cookie for quick response
+        const cookieUser = getUserFromCookie();
+        if (cookieUser) {
+          setUser(cookieUser);
+        }
+
+        // Then verify with server
+        const verifyResult = await verifyAuth();
         
-        console.log('🔍 AdminLayout: User data:', user);
-        
-        if (user) {
-          console.log('✅ AdminLayout: Valid user found');
-          setAdminUser({
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || user.email || 'کاربر سیستم'
-          });
+        if (verifyResult.authenticated && verifyResult.user) {
+          setUser(verifyResult.user);
         } else {
-          console.log('❌ AdminLayout: No user found');
+          console.log('❌ Authentication failed:', verifyResult.error);
+          setUser(null);
+          // Don't redirect here - let middleware handle it
         }
       } catch (error) {
-        console.error('❌ AdminLayout: Error getting user:', error);
+        console.error('❌ Error checking auth:', error);
+        setUser(null);
       } finally {
-        console.log('🏁 AdminLayout: Setting loading to false');
         setLoading(false);
       }
     };
 
-    getUser();
-  }, []); // Only run once on mount, not on pathname changes
+    checkAuth();
+  }, []);
 
   const handleLogout = async () => {
     try {
-      console.log('🚪 AdminLayout: Logging out...');
-      await supabase.auth.signOut();
-      console.log('✅ AdminLayout: Signed out, redirecting to login');
-      router.push('/admin/login');
+      const result = await logoutUser();
+      if (result.success) {
+        setUser(null);
+        router.push('/admin/login');
+      } else {
+        console.error('Logout error:', result.error);
+        // Force redirect even if logout API fails
+        router.push('/admin/login');
+      }
     } catch (error) {
-      console.error('❌ AdminLayout: Error signing out:', error);
+      console.error('Logout error:', error);
+      router.push('/admin/login');
     }
   };
 
-  console.log('🏗️ AdminLayout render - loading:', loading, 'adminUser:', adminUser);
-
   if (loading) {
-    console.log('⏳ AdminLayout: Showing loading state');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -75,15 +80,13 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     );
   }
 
-  // Redirect to login if user is not authenticated or not admin
-  if (!adminUser) {
-    console.log('❌ AdminLayout: No admin user found, redirecting to login');
-    router.push('/admin/login');
+  // Show loading if user is not authenticated (middleware will handle redirect)
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 persian-text">در حال انتقال به صفحه ورود...</p>
+          <p className="text-gray-600 persian-text">در حال بررسی احراز هویت...</p>
         </div>
       </div>
     );
@@ -147,18 +150,18 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           <p className="text-sm text-gray-600 persian-text">سیستم مدیریت مدرسه</p>
           
           {/* Admin User Info */}
-          {adminUser && (
+          {user && (
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                  {adminUser.full_name.charAt(0)}
+                  {user.full_name.charAt(0)}
                 </div>
                 <div className="mr-3 min-w-0">
                   <p className="text-sm font-medium text-blue-900 persian-text truncate">
-                    {adminUser.full_name}
+                    {user.full_name}
                   </p>
                   <p className="text-xs text-blue-600 truncate" dir="ltr">
-                    {adminUser.email}
+                    {user.email}
                   </p>
                 </div>
               </div>
