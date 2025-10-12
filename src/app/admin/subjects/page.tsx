@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
-import { supabase } from '@/lib/supabase';
 import type { Subject } from '@/lib/types';
 
 const subjectSchema = z.object({
@@ -32,12 +31,11 @@ export default function SubjectsPage() {
   // Fetch subjects
   const fetchSubjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
+      const response = await fetch('/api/subjects');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subjects');
+      }
+      const data = await response.json();
       setSubjects(data || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -55,19 +53,30 @@ export default function SubjectsPage() {
     try {
       if (editingSubject) {
         // Update existing subject
-        const { error } = await supabase
-          .from('subjects')
-          .update({ name: data.name })
-          .eq('id', editingSubject.id);
+        const response = await fetch('/api/subjects', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: editingSubject.id, name: data.name }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          throw new Error('Failed to update subject');
+        }
       } else {
         // Create new subject
-        const { error } = await supabase
-          .from('subjects')
-          .insert([{ name: data.name }]);
+        const response = await fetch('/api/subjects', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: data.name }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          throw new Error('Failed to create subject');
+        }
       }
 
       await fetchSubjects();
@@ -84,12 +93,14 @@ export default function SubjectsPage() {
     if (!confirm('آیا از حذف این درس اطمینان دارید؟')) return;
 
     try {
-      const { error } = await supabase
-        .from('subjects')
-        .delete()
-        .eq('id', subjectId);
+      const response = await fetch(`/api/subjects?id=${subjectId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to delete subject');
+      }
+
       await fetchSubjects();
     } catch (error) {
       console.error('Error deleting subject:', error);

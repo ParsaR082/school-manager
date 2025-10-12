@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
-import { supabase } from '@/lib/supabase';
 import type { Class } from '@/lib/types';
 
 const classSchema = z.object({
@@ -32,12 +31,11 @@ export default function ClassesPage() {
   // Fetch classes
   const fetchClasses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
+      const response = await fetch('/api/classes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch classes');
+      }
+      const data = await response.json();
       setClasses(data || []);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -55,19 +53,30 @@ export default function ClassesPage() {
     try {
       if (editingClass) {
         // Update existing class
-        const { error } = await supabase
-          .from('classes')
-          .update({ name: data.name })
-          .eq('id', editingClass.id);
+        const response = await fetch('/api/classes', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: editingClass.id, name: data.name }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          throw new Error('Failed to update class');
+        }
       } else {
         // Create new class
-        const { error } = await supabase
-          .from('classes')
-          .insert([{ name: data.name }]);
+        const response = await fetch('/api/classes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: data.name }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          throw new Error('Failed to create class');
+        }
       }
 
       await fetchClasses();
@@ -84,12 +93,14 @@ export default function ClassesPage() {
     if (!confirm('آیا از حذف این کلاس اطمینان دارید؟')) return;
 
     try {
-      const { error } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', classId);
+      const response = await fetch(`/api/classes?id=${classId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to delete class');
+      }
+
       await fetchClasses();
     } catch (error) {
       console.error('Error deleting class:', error);

@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
-import { supabase } from '@/lib/supabase';
 import type { Student, Class } from '@/lib/types';
 
 const studentSchema = z.object({
@@ -45,31 +44,27 @@ export default function StudentsPage() {
   // Fetch students
   const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select(`
-          *,
-          class:classes(id, name),
-          parent:parents(full_name, phone)
-        `)
-        .order('full_name');
-
-      if (error) throw error;
+      const response = await fetch('/api/students');
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+      const data = await response.json();
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch classes
   const fetchClasses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
+      const response = await fetch('/api/classes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch classes');
+      }
+      const data = await response.json();
       setClasses(data || []);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -88,51 +83,44 @@ export default function StudentsPage() {
   const onSubmit = async (data: StudentFormData) => {
     try {
       if (editingStudent) {
-        // Update existing student and parent
-        const { error: parentError } = await supabase
-          .from('parents')
-          .update({
-            full_name: data.parent_full_name,
-            phone: data.parent_phone,
-          })
-          .eq('id', editingStudent.parent_id);
-
-        if (parentError) throw parentError;
-
-        const { error: studentError } = await supabase
-          .from('students')
-          .update({
+        // Update existing student
+        const response = await fetch('/api/students', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: editingStudent.id,
             full_name: data.full_name,
             national_id: data.national_id,
             class_id: data.class_id,
-          })
-          .eq('id', editingStudent.id);
+            parent_full_name: data.parent_full_name,
+            parent_phone: data.parent_phone,
+          }),
+        });
 
-        if (studentError) throw studentError;
+        if (!response.ok) {
+          throw new Error('Failed to update student');
+        }
       } else {
-        // Create new parent first
-        const { data: parentData, error: parentError } = await supabase
-          .from('parents')
-          .insert([{
-            full_name: data.parent_full_name,
-            phone: data.parent_phone,
-          }])
-          .select()
-          .single();
-
-        if (parentError) throw parentError;
-
-        // Then create student
-        const { error: studentError } = await supabase
-          .from('students')
-          .insert([{
+        // Create new student
+        const response = await fetch('/api/students', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             full_name: data.full_name,
             national_id: data.national_id,
-            parent_id: parentData.id,
             class_id: data.class_id,
-          }]);
+            parent_full_name: data.parent_full_name,
+            parent_phone: data.parent_phone,
+          }),
+        });
 
-        if (studentError) throw studentError;
+        if (!response.ok) {
+          throw new Error('Failed to create student');
+        }
       }
 
       await fetchStudents();
@@ -145,25 +133,17 @@ export default function StudentsPage() {
   };
 
   // Handle delete
-  const handleDelete = async (student: StudentWithClass) => {
+  const handleDelete = async (studentId: string) => {
     if (!confirm('آیا از حذف این دانش‌آموز اطمینان دارید؟')) return;
 
     try {
-      // Delete student first (due to foreign key constraint)
-      const { error: studentError } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', student.id);
+      const response = await fetch(`/api/students?id=${studentId}`, {
+        method: 'DELETE',
+      });
 
-      if (studentError) throw studentError;
-
-      // Then delete parent
-      const { error: parentError } = await supabase
-        .from('parents')
-        .delete()
-        .eq('id', student.parent_id);
-
-      if (parentError) throw parentError;
+      if (!response.ok) {
+        throw new Error('Failed to delete student');
+      }
 
       await fetchStudents();
     } catch (error) {
@@ -283,7 +263,7 @@ export default function StudentsPage() {
                             ویرایش
                           </button>
                           <button
-                            onClick={() => handleDelete(student)}
+                            onClick={() => handleDelete(student.id)}
                             className="text-red-600 hover:text-red-900 persian-text"
                           >
                             حذف

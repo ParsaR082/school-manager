@@ -5,8 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
-import { supabase } from '@/lib/supabase';
-import type { Grade, Student, Subject, Class } from '@/lib/types';
+import type { Grade, Student, Subject } from '@/lib/types';
 import { PERSIAN_MONTHS } from '@/lib/types';
 
 const gradeSchema = z.object({
@@ -54,38 +53,27 @@ export default function GradesPage() {
   // Fetch grades
   const fetchGrades = async () => {
     try {
-      const { data, error } = await supabase
-        .from('grades')
-        .select(`
-          *,
-          student:students(
-            id,
-            full_name,
-            class:classes(id, name)
-          ),
-          subject:subjects(id, name)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const response = await fetch('/api/grades');
+      if (!response.ok) {
+        throw new Error('Failed to fetch grades');
+      }
+      const data = await response.json();
       setGrades(data || []);
     } catch (error) {
       console.error('Error fetching grades:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch students
   const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select(`
-          *,
-          class:classes(id, name)
-        `)
-        .order('full_name');
-
-      if (error) throw error;
+      const response = await fetch('/api/students');
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+      const data = await response.json();
       setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -95,12 +83,11 @@ export default function GradesPage() {
   // Fetch subjects
   const fetchSubjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('subjects')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
+      const response = await fetch('/api/subjects');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subjects');
+      }
+      const data = await response.json();
       setSubjects(data || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -135,32 +122,44 @@ export default function GradesPage() {
     try {
       if (editingGrade) {
         // Update existing grade
-        const { error } = await supabase
-          .from('grades')
-          .update({
+        const response = await fetch('/api/grades', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: editingGrade.id,
             student_id: data.student_id,
             subject_id: data.subject_id,
             month: data.month,
             school_year: data.school_year,
             score: data.score,
-          })
-          .eq('id', editingGrade.id);
+          }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          throw new Error('Failed to update grade');
+        }
       } else {
         // Create new grade
-        const { error } = await supabase
-          .from('grades')
-          .insert([{
+        const response = await fetch('/api/grades', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             student_id: data.student_id,
             subject_id: data.subject_id,
             month: data.month,
             school_year: data.school_year,
             score: data.score,
-            created_by: 'admin', // In a real app, this would be the current user ID
-          }]);
+            created_by: 'admin',
+          }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          throw new Error('Failed to create grade');
+        }
       }
 
       await fetchGrades();
@@ -177,12 +176,14 @@ export default function GradesPage() {
     if (!confirm('آیا از حذف این نمره اطمینان دارید؟')) return;
 
     try {
-      const { error } = await supabase
-        .from('grades')
-        .delete()
-        .eq('id', gradeId);
+      const response = await fetch(`/api/grades?id=${gradeId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to delete grade');
+      }
+
       await fetchGrades();
     } catch (error) {
       console.error('Error deleting grade:', error);
