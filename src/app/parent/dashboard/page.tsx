@@ -14,32 +14,58 @@ interface StudentWithGrades extends Student {
   grades: GradeWithSubject[];
 }
 
+interface ParentSession {
+  parent_id: string;
+  parent_name: string;
+  parent_phone: string;
+  student_id: string;
+  student_name: string;
+  student_national_id: string;
+  class_id: string;
+  login_time: string;
+}
+
 export default function ParentDashboard() {
   const [student, setStudent] = useState<StudentWithGrades | null>(null);
   const [loading, setLoading] = useState(true);
-  const [parentName, setParentName] = useState<string>('');
+  const [parentSession, setParentSession] = useState<ParentSession | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(1403);
   const [monthlyGrades, setMonthlyGrades] = useState<{ [month: number]: GradeWithSubject[] }>({});
   const router = useRouter();
 
   useEffect(() => {
-    // Check if parent is logged in
-    const parentId = localStorage.getItem('parent_id');
-    const storedParentName = localStorage.getItem('parent_name');
-    
-    if (!parentId) {
-      router.push('/parent/login');
-      return;
-    }
-
-    if (storedParentName) {
-      setParentName(storedParentName);
-    }
-
-    fetchStudentData(parentId);
+    checkParentAuthentication();
   }, [router, selectedYear]);
 
-  const fetchStudentData = async (parentId: string) => {
+  const checkParentAuthentication = async () => {
+    try {
+      // Check parent session with server
+      const response = await fetch('/api/parent/verify', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        router.push('/parent/login');
+        return;
+      }
+
+      const result = await response.json();
+      
+      if (!result.authenticated || !result.session) {
+        router.push('/parent/login');
+        return;
+      }
+
+      setParentSession(result.session);
+      fetchStudentData(result.session.student_id);
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      router.push('/parent/login');
+    }
+  };
+
+  const fetchStudentData = async (studentId: string) => {
     try {
       // Fetch student data
       const { data: studentData, error: studentError } = await supabase
@@ -48,7 +74,7 @@ export default function ParentDashboard() {
           *,
           class:classes(id, name)
         `)
-        .eq('parent_id', parentId)
+        .eq('id', studentId)
         .single();
 
       if (studentError) throw studentError;
@@ -87,10 +113,18 @@ export default function ParentDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('parent_id');
-    localStorage.removeItem('parent_name');
-    router.push('/parent/login');
+  const handleLogout = async () => {
+    try {
+      // Call logout API to clear session
+      await fetch('/api/parent/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      router.push('/parent/login');
+    }
   };
 
   const calculateMonthAverage = (grades: GradeWithSubject[]): number => {
@@ -160,7 +194,7 @@ export default function ParentDashboard() {
                 پنل والدین
               </h1>
               <p className="text-responsive-base text-gray-600 persian-text">
-                خوش آمدید، {parentName}
+                خوش آمدید، {parentSession?.parent_name || 'والد گرامی'}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-responsive w-full sm:w-auto">

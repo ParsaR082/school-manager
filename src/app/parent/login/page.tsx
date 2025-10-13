@@ -5,17 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
 
+// Schema for form validation
 const loginSchema = z.object({
-  national_id: z.string()
-    .min(10, 'کد ملی باید ۱۰ رقم باشد')
-    .max(10, 'کد ملی باید ۱۰ رقم باشد')
-    .regex(/^\d+$/, 'کد ملی باید فقط شامل اعداد باشد'),
-  phone: z.string()
-    .min(11, 'شماره تلفن باید ۱۱ رقم باشد')
-    .max(11, 'شماره تلفن باید ۱۱ رقم باشد')
-    .regex(/^09\d{9}$/, 'شماره تلفن باید با ۰۹ شروع شود'),
+  student_national_id: z
+    .string()
+    .min(1, 'کد ملی دانش‌آموز الزامی است')
+    .regex(/^\d{10}$/, 'کد ملی باید دقیقاً ۱۰ رقم باشد'),
+  parent_phone: z
+    .string()
+    .min(1, 'شماره تلفن والدین الزامی است')
+    .regex(/^09\d{9}$/, 'شماره تلفن باید با ۰۹ شروع شود و ۱۱ رقم باشد'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -37,201 +37,141 @@ export default function ParentLoginPage() {
     setIsLoading(true);
     setError(null);
 
-    try {
-      // Check if parent exists with the provided credentials
-      const { data: parent, error: parentError } = await supabase
-        .from('parents')
-        .select('*')
-        .eq('national_id', data.national_id)
-        .eq('phone', data.phone)
-        .single();
+    const response = await fetch('/api/parent/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        student_national_id: data.student_national_id,
+        parent_phone: data.parent_phone,
+      }),
+    });
 
-      if (parentError || !parent) {
-        setError('اطلاعات وارد شده صحیح نمی‌باشد. لطفاً دوباره تلاش کنید.');
-        return;
-      }
+    const result = await response.json();
 
-      // Store parent and student info in localStorage (in a real app, use proper session management)
-      localStorage.setItem('parent_id', parent.id);
-      localStorage.setItem('parent_name', parent.full_name);
-      
-      // Store student info if available
-      // Fetch the related student for this parent
-      const { data: student } = await supabase
-        .from('students')
-        .select('id, full_name, national_id')
-        .eq('parent_id', parent.id)
-        .single();
-
-      if (student) {
-        localStorage.setItem('student_id', student.id);
-        localStorage.setItem('student_name', student.full_name);
-        localStorage.setItem('student_national_id', student.national_id);
-      }
-
-      // Redirect to parent dashboard
+    if (response.ok && result.success) {
+      // هدایت به پنل والدین
       router.push('/parent/dashboard');
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('خطایی در ورود رخ داد. لطفاً دوباره تلاش کنید.');
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError(result.error || 'خطایی در ورود رخ داد');
     }
+
+    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-indigo-50 flex items-center justify-center py-responsive px-responsive">
-      <div className="max-w-md w-full space-y-responsive fade-in">
-        {/* Header */}
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-r from-green-100 to-green-200 shadow-lg mb-6">
-            <svg
-              className="h-8 w-8 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">ورود والدین</h2>
+            <p className="text-gray-600">برای ورود به سامانه، اطلاعات زیر را وارد کنید</p>
           </div>
-          <h2 className="text-responsive-2xl font-bold text-gray-900 persian-text mb-3">
-            ورود والدین
-          </h2>
-          <p className="text-responsive-base text-gray-600 persian-text leading-relaxed">
-            برای مشاهده نمرات و عملکرد فرزند خود وارد شوید
-          </p>
-        </div>
 
-        {/* Login Form */}
-        <div className="card p-responsive">
-          <form className="space-y-responsive" onSubmit={handleSubmit(onSubmit)}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 slide-in">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-red-400"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="mr-3">
-                    <p className="text-responsive-sm text-red-800 persian-text">{error}</p>
-                  </div>
-                </div>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 text-red-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-700 text-sm">{error}</p>
               </div>
-            )}
-
-            <div className="form-group">
-              <label htmlFor="national_id" className="form-label persian-text">
-                کد ملی
-              </label>
-              <div className="mt-1">
-                <input
-                  {...register('national_id')}
-                  type="text"
-                  autoComplete="off"
-                  className="form-input"
-                  placeholder="کد ملی ۱۰ رقمی"
-                  dir="ltr"
-                />
-              </div>
-              {errors.national_id && (
-                <p className="form-error persian-text">
-                  {errors.national_id.message}
-                </p>
-              )}
             </div>
+          )}
 
-            <div className="form-group">
-              <label htmlFor="phone" className="form-label persian-text">
-                شماره تلفن همراه
-              </label>
-              <div className="mt-1">
-                <input
-                  {...register('phone')}
-                  type="text"
-                  autoComplete="tel"
-                  className="form-input"
-                  placeholder="09xxxxxxxxx"
-                  dir="ltr"
-                />
-              </div>
-              {errors.phone && (
-                <p className="form-error persian-text">
-                  {errors.phone.message}
-                </p>
-              )}
-            </div>
-
+          {/* Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Student National ID */}
             <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="btn btn-primary w-full mobile-full-width persian-text"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="loading-spinner mr-3"></div>
-                    در حال ورود...
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    ورود
-                  </div>
-                )}
-              </button>
+              <label htmlFor="student_national_id" className="block text-sm font-medium text-gray-700 mb-2">
+                کد ملی دانش‌آموز
+              </label>
+              <input
+                {...register('student_national_id')}
+                type="text"
+                id="student_national_id"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="مثال: 1234567890"
+                maxLength={10}
+                dir="ltr"
+              />
+              {errors.student_national_id && (
+                <p className="mt-1 text-sm text-red-600">{errors.student_national_id.message}</p>
+              )}
             </div>
 
-            <div className="text-center pt-4 border-t border-gray-200">
-              <p className="text-responsive-sm text-gray-600 persian-text mb-4">
-                در صورت فراموشی اطلاعات ورود، با مدرسه تماس بگیرید
-              </p>
-              <div className="flex items-center justify-center space-x-4 space-x-reverse">
-                <div className="flex items-center text-responsive-xs text-gray-500">
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span className="persian-text">ورود امن</span>
-                </div>
-                <div className="flex items-center text-responsive-xs text-gray-500">
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  <span className="persian-text">محافظت از حریم خصوصی</span>
-                </div>
-              </div>
+            {/* Parent Phone */}
+            <div>
+              <label htmlFor="parent_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                شماره تلفن والدین
+              </label>
+              <input
+                {...register('parent_phone')}
+                type="text"
+                id="parent_phone"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="مثال: 09123456789"
+                maxLength={11}
+                dir="ltr"
+              />
+              {errors.parent_phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.parent_phone.message}</p>
+              )}
             </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  در حال ورود...
+                </div>
+              ) : (
+                'ورود به سامانه'
+              )}
+            </button>
           </form>
+
+          {/* Help Text */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              در صورت بروز مشکل با مدیریت مدرسه تماس بگیرید
+            </p>
+          </div>
         </div>
 
-        {/* Admin Link */}
-        <div className="text-center slide-in">
-          <a
-            href="/admin"
-            className="inline-flex items-center text-responsive-sm text-blue-600 hover:text-blue-500 transition-colors duration-200 persian-text"
-          >
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            ورود مدیران
-          </a>
+        {/* Algorithm Info */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">راهنمای ورود</h3>
+          <div className="space-y-2 text-sm text-gray-600">
+            <div className="flex items-start">
+              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2 flex-shrink-0"></span>
+              <span>کد ملی دانش‌آموز را وارد کنید (۱۰ رقم)</span>
+            </div>
+            <div className="flex items-start">
+              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2 flex-shrink-0"></span>
+              <span>شماره تلفن والدین را وارد کنید (۱۱ رقم، با ۰۹ شروع شود)</span>
+            </div>
+            <div className="flex items-start">
+              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2 flex-shrink-0"></span>
+              <span>سامانه اطلاعات را بررسی کرده و در صورت صحت، شما را وارد می‌کند</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
