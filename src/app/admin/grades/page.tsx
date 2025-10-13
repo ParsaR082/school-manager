@@ -270,13 +270,13 @@ export default function GradesPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 persian-text">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 persian-text">
             مدیریت نمرات
           </h1>
           <button
             onClick={handleAddNew}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 persian-text"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 persian-text text-sm sm:text-base"
           >
             ثبت نمره جدید
           </button>
@@ -284,14 +284,14 @@ export default function GradesPage() {
 
         {/* Filter */}
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center space-x-4 space-x-reverse">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
             <label className="text-sm font-medium text-gray-700 persian-text">
               فیلتر بر اساس کلاس:
             </label>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">همه کلاس‌ها</option>
               {classes.map((classItem) => (
@@ -305,7 +305,73 @@ export default function GradesPage() {
 
         {/* Grades Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile View */}
+          <div className="block md:hidden">
+            <div className="space-y-4 p-4">
+              {filteredGrades.length === 0 ? (
+                <div className="text-center text-gray-500 persian-text py-8">
+                  هیچ نمره‌ای یافت نشد
+                </div>
+              ) : (
+                filteredGrades.map((grade) => (
+                  <div key={grade.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <h3 className="font-medium text-gray-900 persian-text text-sm">
+                          {grade.student?.full_name}
+                        </h3>
+                        <p className="text-xs text-gray-500 persian-text">
+                          کلاس: {grade.student?.class?.name}
+                        </p>
+                      </div>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        grade.score >= 12 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {grade.score}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-500 persian-text">درس: </span>
+                        <span className="text-gray-900 persian-text">{grade.subject?.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 persian-text">ماه: </span>
+                        <span className="text-gray-900 persian-text">
+                          {PERSIAN_MONTHS[grade.month as keyof typeof PERSIAN_MONTHS]}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-500 persian-text">سال تحصیلی: </span>
+                        <span className="text-gray-900">{grade.school_year}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2 space-x-reverse pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => handleEdit(grade)}
+                        className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors persian-text"
+                      >
+                        ویرایش
+                      </button>
+                      <button
+                        onClick={() => handleDelete(grade.id)}
+                        className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded-md text-xs font-medium hover:bg-red-100 transition-colors persian-text"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -393,9 +459,9 @@ export default function GradesPage() {
         {/* Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div className="relative top-4 sm:top-10 mx-auto p-4 sm:p-5 border w-full max-w-md sm:max-w-lg shadow-lg rounded-md bg-white m-4">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 persian-text mb-4">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 persian-text mb-4">
                   {editingGrade ? 'ویرایش نمره' : 'ثبت نمره جدید'}
                 </h3>
                 
@@ -406,7 +472,7 @@ export default function GradesPage() {
                     </label>
                     <select
                       {...register('student_id')}
-                      className="form-input"
+                      className="form-input text-sm"
                     >
                       <option value="">انتخاب دانش‌آموز</option>
                       {filteredStudents.map((student) => (
@@ -428,7 +494,7 @@ export default function GradesPage() {
                     </label>
                     <select
                       {...register('subject_id')}
-                      className="form-input"
+                      className="form-input text-sm"
                     >
                       <option value="">انتخاب درس</option>
                       {filteredSubjects.map((subject) => (
@@ -444,14 +510,14 @@ export default function GradesPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 persian-text mb-1">
                         ماه
                       </label>
                       <select
                         {...register('month', { valueAsNumber: true })}
-                        className="form-input"
+                        className="form-input text-sm"
                       >
                         {Object.entries(PERSIAN_MONTHS).map(([month, name]) => (
                           <option key={month} value={parseInt(month)}>
@@ -473,7 +539,7 @@ export default function GradesPage() {
                       <input
                         type="number"
                         {...register('school_year', { valueAsNumber: true })}
-                        className="form-input"
+                        className="form-input text-sm"
                         min="1400"
                         max="1450"
                       />
@@ -492,7 +558,7 @@ export default function GradesPage() {
                     <input
                       type="number"
                       {...register('score', { valueAsNumber: true })}
-                      className="form-input"
+                      className="form-input text-sm"
                       min="0"
                       max="20"
                       step="0.25"
@@ -504,7 +570,7 @@ export default function GradesPage() {
                     )}
                   </div>
 
-                  <div className="flex justify-end space-x-3 space-x-reverse pt-4">
+                  <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse pt-4">
                     <button
                       type="button"
                       onClick={() => {
@@ -512,14 +578,14 @@ export default function GradesPage() {
                         setEditingGrade(null);
                         reset({ school_year: currentYear });
                       }}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 persian-text"
+                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 persian-text"
                     >
                       انصراف
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 persian-text"
+                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 persian-text"
                     >
                       {isSubmitting ? 'در حال ذخیره...' : editingGrade ? 'ویرایش' : 'ثبت'}
                     </button>
