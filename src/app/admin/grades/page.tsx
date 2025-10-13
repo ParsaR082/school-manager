@@ -406,7 +406,7 @@ export default function GradesPage() {
                     </label>
                     <select
                       {...register('student_id')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                     >
                       <option value="">انتخاب دانش‌آموز</option>
                       {filteredStudents.map((student) => (
@@ -428,7 +428,7 @@ export default function GradesPage() {
                     </label>
                     <select
                       {...register('subject_id')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                     >
                       <option value="">انتخاب درس</option>
                       {filteredSubjects.map((subject) => (
@@ -451,7 +451,7 @@ export default function GradesPage() {
                       </label>
                       <select
                         {...register('month', { valueAsNumber: true })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="form-input"
                       >
                         {Object.entries(PERSIAN_MONTHS).map(([month, name]) => (
                           <option key={month} value={parseInt(month)}>
@@ -473,7 +473,7 @@ export default function GradesPage() {
                       <input
                         type="number"
                         {...register('school_year', { valueAsNumber: true })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="form-input"
                         min="1400"
                         max="1450"
                       />
@@ -492,7 +492,7 @@ export default function GradesPage() {
                     <input
                       type="number"
                       {...register('score', { valueAsNumber: true })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                       min="0"
                       max="20"
                       step="0.25"

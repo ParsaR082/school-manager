@@ -133,7 +133,42 @@ body {
   
   /* Form styles */
   .form-input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white placeholder-gray-500;
+    color: #000000 !important;
+  }
+  
+  .form-input:focus {
+    @apply bg-white;
+    color: #000000 !important;
+  }
+  
+  .form-input:active {
+    color: #000000 !important;
+  }
+  
+  .form-input:hover {
+    color: #000000 !important;
+  }
+  
+  .form-input:visited {
+    color: #000000 !important;
+  }
+  
+  .form-input:link {
+    color: #000000 !important;
+  }
+  
+  .form-input[type="text"] {
+    color: #000000 !important;
+  }
+  
+  .form-input[type="tel"] {
+    color: #000000 !important;
+  }
+  
+  .form-input::selection {
+    background-color: #3b82f6;
+    color: #ffffff;
   }
   
   .form-label {

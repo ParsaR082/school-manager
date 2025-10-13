@@ -295,7 +295,7 @@ export default function StudentsPage() {
                     <input
                       type="text"
                       {...register('full_name')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                       placeholder="مثال: علی احمدی"
                     />
                     {errors.full_name && (
@@ -312,7 +312,7 @@ export default function StudentsPage() {
                     <input
                       type="text"
                       {...register('national_id')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                       placeholder="1234567890"
                       maxLength={10}
                     />
@@ -329,7 +329,7 @@ export default function StudentsPage() {
                     </label>
                     <select
                       {...register('class_id')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                     >
                       <option value="">انتخاب کلاس</option>
                       {classes.map((classItem) => (
@@ -352,7 +352,7 @@ export default function StudentsPage() {
                     <input
                       type="text"
                       {...register('parent_full_name')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                       placeholder="مثال: محمد احمدی"
                     />
                     {errors.parent_full_name && (
@@ -369,7 +369,7 @@ export default function StudentsPage() {
                     <input
                       type="text"
                       {...register('parent_phone')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="form-input"
                       placeholder="09123456789"
                     />
                     {errors.parent_phone && (

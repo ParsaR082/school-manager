@@ -146,7 +146,7 @@ export default function AdminLogin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-right"
+                className="form-input text-right"
                 placeholder="admin@example.com"
                 disabled={loading}
               />
@@ -164,7 +164,7 @@ export default function AdminLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 text-right"
+                className="form-input text-right"
                 placeholder="رمز عبور خود را وارد کنید"
                 disabled={loading}
               />
