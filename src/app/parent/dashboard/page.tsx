@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Student, Grade, Subject, Class, SchoolMonth } from '@/lib/types';
@@ -32,62 +32,6 @@ export default function ParentDashboard() {
   const [parentSession, setParentSession] = useState<ParentSession | null>(null);
   const [monthlyGrades, setMonthlyGrades] = useState<{ [month: number]: GradeWithSubject[] }>({});
   const router = useRouter();
-
-  const fetchStudentData = useCallback(async (parentId: string) => {
-    try {
-      // Fetch student data
-      const { data: studentData, error: studentError } = await supabase
-        .from('students')
-        .select(`
-          *,
-          class:classes(id, name)
-        `)
-        .eq('parent_id', parentId)
-        .single();
-
-      if (studentError) {
-        console.error('Error fetching student:', studentError);
-        return;
-      }
-
-      // Fetch grades for the selected year
-      const { data: gradesData, error: gradesError } = await supabase
-        .from('grades')
-        .select(`
-          *,
-          subject:subjects(id, name)
-        `)
-        .eq('student_id', studentData.id)
-        .eq('school_year', selectedYear);
-
-      if (gradesError) {
-        console.error('Error fetching grades:', gradesError);
-        return;
-      }
-
-      const studentWithGrades: StudentWithGrades = {
-        ...studentData,
-        grades: gradesData as GradeWithSubject[]
-      };
-
-      setStudent(studentWithGrades);
-
-      // Group grades by month
-      const gradesByMonth: { [month: number]: GradeWithSubject[] } = {};
-      gradesData.forEach((grade: GradeWithSubject) => {
-        if (!gradesByMonth[grade.month]) {
-          gradesByMonth[grade.month] = [];
-        }
-        gradesByMonth[grade.month].push(grade);
-      });
-
-      setMonthlyGrades(gradesByMonth);
-    } catch (error) {
-      console.error('Error in fetchStudentData:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedYear]);
 
   useEffect(() => {
     checkParentAuthentication();
@@ -158,7 +102,7 @@ export default function ParentDashboard() {
 
       // دسته‌بندی ماهانه نمرات
       const monthlyGradesData: { [month: number]: GradeWithSubject[] } = {};
-      gradesData?.forEach((grade: any) => {
+      gradesData?.forEach((grade: GradeWithSubject) => {
         if (!monthlyGradesData[grade.month]) monthlyGradesData[grade.month] = [];
         monthlyGradesData[grade.month].push(grade);
       });
