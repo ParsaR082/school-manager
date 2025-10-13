@@ -193,7 +193,7 @@ export default function AdminLogin() {
           <div className="mt-8 p-4 bg-blue-50 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 mb-2">اطلاعات نمونه:</h3>
             <div className="text-xs text-blue-600 space-y-1">
-              <p><strong>ایمیل:</strong> admin@example.com</p>
+              <p><strong>ایمیل:</strong> admin@school.com</p>
               <p><strong>رمز عبور:</strong> admin123</p>
             </div>
           </div>

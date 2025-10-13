@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,12 +8,12 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!national_id || !phone) {
       return NextResponse.json(
-        { error: 'کد ملی و شماره تلفن الزامی است' },
+        { error: 'کد ملی دانش‌آموز و شماره تلفن والدین الزامی است' },
         { status: 400 }
       );
     }
 
-    // Validate national ID format
+    // Validate national_id format (10 digits)
     if (!/^\d{10}$/.test(national_id)) {
       return NextResponse.json(
         { error: 'کد ملی باید ۱۰ رقم باشد' },
@@ -21,40 +21,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate phone format
+    // Validate phone format (11 digits starting with 09)
     if (!/^09\d{9}$/.test(phone)) {
       return NextResponse.json(
-        { error: 'شماره تلفن باید با ۰۹ شروع شود و ۱۱ رقم باشد' },
+        { error: 'شماره تلفن باید ۱۱ رقم و با ۰۹ شروع شود' },
         { status: 400 }
       );
     }
 
-    // Check if parent exists
-    const { data: parent, error } = await supabase
-      .from('parents')
-      .select('id, full_name, national_id, phone')
+    // Find student by national_id and join with parent to verify phone
+    const { data: result, error } = await supabaseAdmin
+      .from('students')
+      .select(`
+        id,
+        full_name,
+        national_id,
+        parent_id,
+        parents (
+          id,
+          full_name,
+          phone
+        )
+      `)
       .eq('national_id', national_id)
-      .eq('phone', phone)
+      .eq('parents.phone', phone)
       .single();
 
-    if (error || !parent) {
+    if (error || !result) {
       return NextResponse.json(
-        { error: 'اطلاعات وارد شده صحیح نمی‌باشد' },
+        { error: 'کد ملی دانش‌آموز یا شماره تلفن والدین صحیح نیست' },
         { status: 401 }
       );
     }
 
-    // Return parent info (without sensitive data)
+    // Return both parent and student information
     return NextResponse.json({
       success: true,
       parent: {
-        id: parent.id,
-        full_name: parent.full_name,
+        id: result.parents.id,
+        full_name: result.parents.full_name
       },
+      student: {
+        id: result.id,
+        full_name: result.full_name,
+        national_id: result.national_id
+      }
     });
 
   } catch (error) {
-    console.error('Parent auth error:', error);
+    console.error('Parent authentication error:', error);
     return NextResponse.json(
       { error: 'خطای سرور' },
       { status: 500 }

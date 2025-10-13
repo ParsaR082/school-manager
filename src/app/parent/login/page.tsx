@@ -51,9 +51,23 @@ export default function ParentLoginPage() {
         return;
       }
 
-      // Store parent info in localStorage (in a real app, use proper session management)
+      // Store parent and student info in localStorage (in a real app, use proper session management)
       localStorage.setItem('parent_id', parent.id);
       localStorage.setItem('parent_name', parent.full_name);
+      
+      // Store student info if available
+      // Fetch the related student for this parent
+      const { data: student } = await supabase
+        .from('students')
+        .select('id, full_name, national_id')
+        .eq('parent_id', parent.id)
+        .single();
+
+      if (student) {
+        localStorage.setItem('student_id', student.id);
+        localStorage.setItem('student_name', student.full_name);
+        localStorage.setItem('student_national_id', student.national_id);
+      }
 
       // Redirect to parent dashboard
       router.push('/parent/dashboard');
