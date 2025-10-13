@@ -14,7 +14,7 @@ interface GradeWithDetails extends Grade {
 interface MonthlyGrade {
   subject_id: string;
   subject_name: string;
-  grades: { [month: number]: number | null };
+  grades: { [gradeNumber: number]: { display: string; numeric: number } | null }; // Store both display format and numeric value
 }
 
 export default function GradesPage() {
@@ -30,6 +30,7 @@ export default function GradesPage() {
   const [isNewGradeMode, setIsNewGradeMode] = useState(false);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<number>(7); // New state for month filter
   const [currentStep, setCurrentStep] = useState<'class' | 'student' | 'grades'>('class');
   const [monthlyGrades, setMonthlyGrades] = useState<MonthlyGrade[]>([]);
   const [currentYear] = useState(1403);
@@ -134,27 +135,54 @@ export default function GradesPage() {
 
   // Load existing grades for selected student
   useEffect(() => {
-    if (selectedStudent && studentSubjects.length > 0) {
-
-      
-      const existingGrades = grades.filter(g => g.student_id === selectedStudent && g.school_year === currentYear);
+    if (selectedStudent && studentSubjects.length > 0 && selectedMonth) {
+      const existingGrades = grades.filter(g => 
+        g.student_id === selectedStudent && 
+        g.school_year === currentYear && 
+        g.month === selectedMonth
+      );
       
       const monthlyGradesData: MonthlyGrade[] = studentSubjects.map(subject => {
-        const subjectGrades: { [month: number]: number | null } = {};
+        const subjectGrades: { [gradeNumber: number]: { display: string; numeric: number } | null } = {};
         
-        // Initialize all months with null
-        for (let month = 7; month <= 12; month++) {
-          subjectGrades[month] = null;
-        }
-        for (let month = 1; month <= 6; month++) {
-          subjectGrades[month] = null;
+        // Initialize grade numbers 1-10 with null
+        for (let gradeNum = 1; gradeNum <= 10; gradeNum++) {
+          subjectGrades[gradeNum] = null;
         }
         
-        // Fill existing grades
+        // Fill existing grades for this month
         existingGrades
           .filter(g => g.subject_id === subject.id)
           .forEach(g => {
-            subjectGrades[g.month] = g.score;
+            const gradeNumber = (g as any).grade_number || 1; // Default to 1 if not set
+            // For existing grades from database, display the original format
+            // If it's a string (like "3/5"), use it as is
+            // If it's a number, format it properly
+            let displayValue: string;
+            let numericValue: number;
+            
+            if (typeof g.score === 'string') {
+              // It's already in string format (like "3/5")
+              displayValue = g.score;
+              // Calculate numeric value for validation
+              if (g.score.includes('/')) {
+                const [numerator, denominator] = g.score.split('/').map(Number);
+                numericValue = denominator !== 0 ? (numerator / denominator) * 20 : 0;
+              } else {
+                numericValue = parseFloat(g.score) || 0;
+              }
+            } else {
+              // It's a numeric value, format for display
+              displayValue = g.score % 1 === 0 ? 
+                g.score.toString() : 
+                g.score.toFixed(2).replace(/\.?0+$/, '');
+              numericValue = g.score;
+            }
+            
+            subjectGrades[gradeNumber] = {
+              display: displayValue,
+              numeric: numericValue
+            };
           });
         
         return {
@@ -169,7 +197,7 @@ export default function GradesPage() {
       // Student selected but no subjects found - this might indicate a data loading issue
       setMonthlyGrades([]);
     }
-  }, [selectedStudent, studentSubjects, grades, currentYear]);
+  }, [selectedStudent, studentSubjects, grades, currentYear, selectedMonth]);
 
   // Handle new grade registration
   const startNewGradeRegistration = () => {
@@ -191,21 +219,67 @@ export default function GradesPage() {
     setCurrentStep('grades');
   };
 
-  const handleGradeChange = (subjectId: string, month: number, score: string) => {
-    const numericScore = score === '' ? null : parseFloat(score);
+  const handleGradeChange = (subjectId: string, gradeNumber: number, score: string) => {
+    let gradeData: { display: string; numeric: number } | null = null;
+    
+    if (score !== '') {
+      let numericScore: number | null = null;
+      
+      // Check if the input contains a fraction (e.g., "3/5", "2/4")
+      if (score.includes('/')) {
+        const parts = score.split('/');
+        if (parts.length === 2 && parts[1] !== '') {
+          // Only process if both numerator and denominator are present
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          
+          // Validate that both parts are numbers and denominator is not zero
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+            numericScore = numerator / denominator;
+            
+            // Ensure the result is within valid range (0-20)
+            if (numericScore < 0) numericScore = 0;
+            if (numericScore > 20) numericScore = 20;
+            
+            // Keep the original fraction format for display
+            gradeData = { display: score, numeric: numericScore };
+          } else {
+            // If fraction is invalid but user is still typing, keep the display value
+            gradeData = { display: score, numeric: 0 };
+          }
+        } else {
+          // User is still typing the fraction (e.g., "3/" or "3/5"), keep the display value
+          gradeData = { display: score, numeric: 0 };
+        }
+      } else {
+        // Handle regular decimal input
+        const parsed = parseFloat(score);
+        if (!isNaN(parsed)) {
+          numericScore = parsed;
+          
+          // Ensure the result is within valid range (0-20)
+          if (numericScore < 0) numericScore = 0;
+          if (numericScore > 20) numericScore = 20;
+          
+          // For decimal numbers, store as is
+          gradeData = { display: score, numeric: numericScore };
+        } else {
+          // If input is not a valid number but user is still typing, keep the display value
+          gradeData = { display: score, numeric: 0 };
+        }
+      }
+    }
     
     setMonthlyGrades(prev => 
       prev.map(mg => 
         mg.subject_id === subjectId 
-          ? { ...mg, grades: { ...mg.grades, [month]: numericScore } }
+          ? { ...mg, grades: { ...mg.grades, [gradeNumber]: gradeData } }
           : mg
       )
     );
   };
 
   const saveGrades = async () => {
-    if (!selectedStudent) return;
-    
     setSaving(true);
     try {
       // Get current user ID
@@ -215,25 +289,26 @@ export default function GradesPage() {
       }
 
       // Prepare grades data
-      const gradesToSave: Omit<Grade, 'id'>[] = [];
+      const gradesToSave: any[] = [];
       
       monthlyGrades.forEach(mg => {
-        Object.entries(mg.grades).forEach(([month, score]) => {
-          if (score !== null && score >= 0 && score <= 20) {
+        Object.entries(mg.grades).forEach(([gradeNumber, gradeData]) => {
+          if (gradeData !== null && gradeData.numeric >= 0 && gradeData.numeric <= 20) {
             gradesToSave.push({
               student_id: selectedStudent,
               subject_id: mg.subject_id,
-              month: parseInt(month),
+              month: selectedMonth,
               school_year: currentYear,
-              score: score,
-              created_by: currentUser.id, // Use actual user ID instead of 'admin'
+              score: gradeData.display, // Store the original format (3/5 or 15.5)
+              grade_number: parseInt(gradeNumber),
+              created_by: currentUser.id,
               created_at: new Date().toISOString()
             });
           }
         });
       });
 
-      // Delete existing grades for this student and year
+      // Delete existing grades for this student, month and year
       await fetch('/api/grades', {
         method: 'DELETE',
         headers: {
@@ -241,6 +316,7 @@ export default function GradesPage() {
         },
         body: JSON.stringify({
           student_id: selectedStudent,
+          month: selectedMonth,
           school_year: currentYear
         }),
       });
@@ -265,6 +341,7 @@ export default function GradesPage() {
       setCurrentStep('class');
       setSelectedClass('');
       setSelectedStudent('');
+      setSelectedMonth(7);
       setMonthlyGrades([]);
     } catch (error) {
       console.error('Error saving grades:', error);
@@ -329,8 +406,8 @@ export default function GradesPage() {
 
         {/* New Grade Registration Modal */}
         {isNewGradeMode && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-2 mx-auto p-2 sm:p-4 border w-full max-w-6xl shadow-lg rounded-md bg-white m-2 sm:m-4 min-h-[calc(100vh-1rem)] sm:min-h-0">
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+            <div className="relative w-full max-w-6xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto p-4 sm:p-6">
               <div className="mb-4 sm:mb-6">
                 <h3 className="text-base sm:text-lg font-medium text-gray-900 persian-text mb-2 sm:mb-4">
                   ثبت نمرات جدید
@@ -427,6 +504,24 @@ export default function GradesPage() {
                       </button>
                     </div>
                     
+                    {/* Month Filter */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 persian-text mb-2">
+                        انتخاب ماه:
+                      </label>
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 persian-text text-gray-900"
+                      >
+                        {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
+                          <option key={month} value={month} className="text-gray-900">
+                            {PERSIAN_MONTHS[month as keyof typeof PERSIAN_MONTHS]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
                     <div className="overflow-x-auto -mx-2 sm:mx-0">
                       <div className="inline-block min-w-full align-middle">
                         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
@@ -436,11 +531,11 @@ export default function GradesPage() {
                                 <th className="sticky right-0 bg-gray-50 px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text border-l border-gray-200">
                                   درس
                                 </th>
-                                {/* Academic year months: Mehr to Khordad */}
-                                {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
-                                  <th key={month} className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider persian-text min-w-[60px]">
+                                {/* Grade columns 1-10 */}
+                                {Array.from({ length: 10 }, (_, i) => i + 1).map(gradeNum => (
+                                  <th key={gradeNum} className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider persian-text min-w-[60px]">
                                     <div className="truncate">
-                                      {PERSIAN_MONTHS[month as keyof typeof PERSIAN_MONTHS]}
+                                      نمره {gradeNum}
                                     </div>
                                   </th>
                                 ))}
@@ -454,18 +549,18 @@ export default function GradesPage() {
                                       {mg.subject_name}
                                     </div>
                                   </td>
-                                  {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
-                                    <td key={month} className="px-2 sm:px-3 py-4 whitespace-nowrap text-center">
+                                  {Array.from({ length: 10 }, (_, i) => i + 1).map(gradeNum => (
+                                    <td key={gradeNum} className="px-2 sm:px-3 py-4 whitespace-nowrap text-center">
                                       <input
-                                        key={`${mg.subject_id}-${month}`}
-                                        type="number"
-                                        min="0"
-                                        max="20"
-                                        step="0.25"
-                                        value={mg.grades[month] ?? ''}
-                                        onChange={(e) => handleGradeChange(mg.subject_id, month, e.target.value)}
+                                        key={`${mg.subject_id}-${gradeNum}`}
+                                        type="text"
+                                        value={mg.grades[gradeNum] !== null ? 
+                                          mg.grades[gradeNum]!.display : ''
+                                        }
+                                        onChange={(e) => handleGradeChange(mg.subject_id, gradeNum, e.target.value)}
                                         className="w-12 sm:w-16 px-1 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         placeholder="-"
+                                        title="می‌توانید نمره اعشاری (مثل 15.5) یا کسری (مثل 3/5) وارد کنید"
                                       />
                                     </td>
                                   ))}
@@ -479,7 +574,7 @@ export default function GradesPage() {
                     
                     {/* Mobile scroll hint */}
                     <div className="text-xs text-gray-500 persian-text text-center sm:hidden">
-                      برای مشاهده ماه‌های بیشتر، جدول را به چپ بکشید
+                      برای مشاهده نمرات بیشتر، جدول را به چپ بکشید
                     </div>
                   </div>
                 )}

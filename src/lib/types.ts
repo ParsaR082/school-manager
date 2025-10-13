@@ -53,46 +53,7 @@ export interface Grade {
   subject?: Subject;
 }
 
-// Form types
-export interface CreateClassForm {
-  name: string;
-}
-
-export interface CreateSubjectForm {
-  name: string;
-}
-
-export interface CreateStudentForm {
-  full_name: string;
-  national_id: string;
-  parent_full_name: string;
-  parent_phone: string;
-  class_id: string;
-}
-
-export interface CreateGradeForm {
-  student_id: string;
-  subject_id: string;
-  month: number;
-  school_year: number;
-  score: number;
-}
-
-// Utility types
-export interface MonthlyGrades {
-  [subjectId: string]: {
-    subject_name: string;
-    grades: {
-      [month: number]: number | null;
-    };
-    average: number | null;
-  };
-}
-
-export interface StudentGradeReport {
-  student: Student;
-  grades: MonthlyGrades;
-}
+// Utility types (keeping only used ones)
 
 // Persian month names
 export const PERSIAN_MONTHS = {

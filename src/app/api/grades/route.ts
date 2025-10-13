@@ -135,7 +135,24 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
     
-    // Handle bulk deletion by student and school year
+    // Handle bulk deletion by student, month and school year
+    if (body.student_id && body.month && body.school_year) {
+      const { error } = await supabaseAdmin
+        .from('grades')
+        .delete()
+        .eq('student_id', body.student_id)
+        .eq('month', body.month)
+        .eq('school_year', body.school_year);
+
+      if (error) {
+        console.error('Error deleting grades:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+    
+    // Handle bulk deletion by student and school year (for backward compatibility)
     if (body.student_id && body.school_year) {
       const { error } = await supabaseAdmin
         .from('grades')
@@ -151,7 +168,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ error: 'Either grade ID or student_id with school_year is required' }, { status: 400 });
+    return NextResponse.json({ error: 'Either grade ID or student_id with school_year (and optionally month) is required' }, { status: 400 });
   } catch (error) {
     console.error('Error in DELETE /api/grades:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

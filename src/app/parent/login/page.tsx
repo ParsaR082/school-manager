@@ -98,7 +98,7 @@ export default function ParentLoginPage() {
                 {...register('student_national_id')}
                 type="text"
                 id="student_national_id"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-gray-50 text-gray-900 placeholder-gray-500"
                 placeholder="مثال: 1234567890"
                 maxLength={10}
                 dir="ltr"
@@ -117,7 +117,7 @@ export default function ParentLoginPage() {
                 {...register('parent_phone')}
                 type="text"
                 id="parent_phone"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-gray-50 text-gray-900 placeholder-gray-500"
                 placeholder="مثال: 09123456789"
                 maxLength={11}
                 dir="ltr"

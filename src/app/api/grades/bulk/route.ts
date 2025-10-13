@@ -55,6 +55,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Validate grade_number if provided
+      if (grade.grade_number && (grade.grade_number < 1 || grade.grade_number > 10)) {
+        console.error('❌ Invalid grade_number:', grade.grade_number);
+        return NextResponse.json(
+          { error: 'grade_number must be between 1 and 10' },
+          { status: 400 }
+        );
+      }
+
       // Validate UUID format for created_by
       if (!grade.created_by || typeof grade.created_by !== 'string') {
         console.error('❌ Invalid created_by field:', grade.created_by);
