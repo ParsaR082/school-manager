@@ -51,6 +51,21 @@ export default function ParentLoginPage() {
     const result = await response.json();
 
     if (response.ok && result.success) {
+      // ذخیره session در localStorage
+      const sessionData = {
+        parent_id: result.data.parent.id,
+        parent_name: result.data.parent.name,
+        parent_phone: result.data.parent.phone,
+        student_id: result.data.student.id,
+        student_name: result.data.student.name,
+        student_national_id: result.data.student.national_id,
+        class_id: result.data.student.class_id,
+        login_time: new Date().toISOString(),
+        access_token: 'parent-session-token'
+      };
+      
+      localStorage.setItem('parent-session', JSON.stringify(sessionData));
+      
       // هدایت به پنل والدین
       router.push('/parent/dashboard');
     } else {

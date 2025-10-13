@@ -36,7 +36,7 @@ export default function ParentDashboard() {
   const [student, setStudent] = useState<StudentWithGrades | null>(null);
   const [loading, setLoading] = useState(true);
   const [parentSession, setParentSession] = useState<ParentSession | null>(null);
-  const [monthlyGrades, setMonthlyGrades] = useState<{ [month: number]: GradeWithSubject[] }>({});
+  const [monthlyGrades, setMonthlyGrades] = useState<Grade[]>([]);
   const [displayGrades, setDisplayGrades] = useState<MonthlyGrade[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<number>(7); // Default to Mehr (month 7)
@@ -93,7 +93,8 @@ export default function ParentDashboard() {
   const prepareDisplayGrades = useCallback(() => {
     if (!student || subjects.length === 0) return;
 
-    const currentMonthGrades = monthlyGrades[selectedMonth] || [];
+    // monthlyGrades is an array of Grade objects, filter by selected month
+    const currentMonthGrades = monthlyGrades.filter((grade: Grade) => grade.month === selectedMonth);
     
     const displayGradesData: MonthlyGrade[] = subjects.map(subject => {
       const subjectGrades: { [gradeNumber: number]: string | null } = {};
