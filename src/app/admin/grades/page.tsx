@@ -330,34 +330,34 @@ export default function GradesPage() {
         {/* New Grade Registration Modal */}
         {isNewGradeMode && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-4 mx-auto p-4 border w-full max-w-6xl shadow-lg rounded-md bg-white m-4">
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-900 persian-text mb-4">
+            <div className="relative top-2 mx-auto p-2 sm:p-4 border w-full max-w-6xl shadow-lg rounded-md bg-white m-2 sm:m-4 min-h-[calc(100vh-1rem)] sm:min-h-0">
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 persian-text mb-2 sm:mb-4">
                   ثبت نمرات جدید
                 </h3>
                 
                 {/* Progress Steps */}
-                <div className="flex items-center justify-center mb-6">
-                  <div className="flex items-center space-x-4 space-x-reverse">
-                    <div className={`flex items-center ${currentStep === 'class' ? 'text-blue-600' : currentStep === 'student' || currentStep === 'grades' ? 'text-green-600' : 'text-gray-400'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'class' ? 'bg-blue-100' : currentStep === 'student' || currentStep === 'grades' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                <div className="flex items-center justify-center mb-4 sm:mb-6 px-2">
+                  <div className="flex items-center space-x-2 sm:space-x-4 space-x-reverse overflow-x-auto">
+                    <div className={`flex items-center ${currentStep === 'class' ? 'text-blue-600' : currentStep === 'student' || currentStep === 'grades' ? 'text-green-600' : 'text-gray-400'} flex-shrink-0`}>
+                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${currentStep === 'class' ? 'bg-blue-100' : currentStep === 'student' || currentStep === 'grades' ? 'bg-green-100' : 'bg-gray-100'}`}>
                         1
                       </div>
-                      <span className="mr-2 text-sm persian-text">انتخاب کلاس</span>
+                      <span className="mr-1 sm:mr-2 text-xs sm:text-sm persian-text whitespace-nowrap">انتخاب کلاس</span>
                     </div>
-                    <div className={`w-8 h-0.5 ${currentStep === 'student' || currentStep === 'grades' ? 'bg-green-600' : 'bg-gray-300'}`}></div>
-                    <div className={`flex items-center ${currentStep === 'student' ? 'text-blue-600' : currentStep === 'grades' ? 'text-green-600' : 'text-gray-400'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'student' ? 'bg-blue-100' : currentStep === 'grades' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    <div className={`w-4 sm:w-8 h-0.5 ${currentStep === 'student' || currentStep === 'grades' ? 'bg-green-600' : 'bg-gray-300'} flex-shrink-0`}></div>
+                    <div className={`flex items-center ${currentStep === 'student' ? 'text-blue-600' : currentStep === 'grades' ? 'text-green-600' : 'text-gray-400'} flex-shrink-0`}>
+                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${currentStep === 'student' ? 'bg-blue-100' : currentStep === 'grades' ? 'bg-green-100' : 'bg-gray-100'}`}>
                         2
                       </div>
-                      <span className="mr-2 text-sm persian-text">انتخاب دانش‌آموز</span>
+                      <span className="mr-1 sm:mr-2 text-xs sm:text-sm persian-text whitespace-nowrap">انتخاب دانش‌آموز</span>
                     </div>
-                    <div className={`w-8 h-0.5 ${currentStep === 'grades' ? 'bg-green-600' : 'bg-gray-300'}`}></div>
-                    <div className={`flex items-center ${currentStep === 'grades' ? 'text-blue-600' : 'text-gray-400'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'grades' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <div className={`w-4 sm:w-8 h-0.5 ${currentStep === 'grades' ? 'bg-green-600' : 'bg-gray-300'} flex-shrink-0`}></div>
+                    <div className={`flex items-center ${currentStep === 'grades' ? 'text-blue-600' : 'text-gray-400'} flex-shrink-0`}>
+                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${currentStep === 'grades' ? 'bg-blue-100' : 'bg-gray-100'}`}>
                         3
                       </div>
-                      <span className="mr-2 text-sm persian-text">ثبت نمرات</span>
+                      <span className="mr-1 sm:mr-2 text-xs sm:text-sm persian-text whitespace-nowrap">ثبت نمرات</span>
                     </div>
                   </div>
                 </div>
@@ -365,16 +365,16 @@ export default function GradesPage() {
                 {/* Step 1: Class Selection */}
                 {currentStep === 'class' && (
                   <div className="space-y-4">
-                    <h4 className="text-md font-medium text-gray-900 persian-text">انتخاب کلاس</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <h4 className="text-sm sm:text-md font-medium text-gray-900 persian-text">انتخاب کلاس</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                       {classes.map((cls) => (
                         <button
                           key={cls.id}
                           onClick={() => handleClassSelection(cls.id)}
-                          className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center persian-text"
+                          className="p-3 sm:p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center persian-text"
                         >
-                          <div className="font-medium text-gray-900">{cls.name}</div>
-                          <div className="text-sm text-gray-500 mt-1">
+                          <div className="font-medium text-gray-900 text-sm sm:text-base">{cls.name}</div>
+                          <div className="text-xs sm:text-sm text-gray-500 mt-1">
                             {students.filter(s => s.class?.id === cls.id).length} دانش‌آموز
                           </div>
                         </button>
@@ -386,26 +386,26 @@ export default function GradesPage() {
                 {/* Step 2: Student Selection */}
                 {currentStep === 'student' && (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-md font-medium text-gray-900 persian-text">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                      <h4 className="text-sm sm:text-md font-medium text-gray-900 persian-text">
                         انتخاب دانش‌آموز از کلاس {classes.find(c => c.id === selectedClass)?.name}
                       </h4>
                       <button
                         onClick={() => setCurrentStep('class')}
-                        className="text-blue-600 hover:text-blue-800 text-sm persian-text"
+                        className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm persian-text self-start sm:self-auto"
                       >
                         تغییر کلاس
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-80 sm:max-h-96 overflow-y-auto">
                       {classStudents.map((student) => (
                         <button
                           key={student.id}
                           onClick={() => handleStudentSelection(student.id)}
-                          className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-right persian-text"
+                          className="p-3 sm:p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-right persian-text"
                         >
-                          <div className="font-medium text-gray-900">{student.full_name}</div>
-                          <div className="text-sm text-gray-500 mt-1">{student.national_id}</div>
+                          <div className="font-medium text-gray-900 text-sm sm:text-base">{student.full_name}</div>
+                          <div className="text-xs sm:text-sm text-gray-500 mt-1">{student.national_id}</div>
                         </button>
                       ))}
                     </div>
@@ -415,58 +415,71 @@ export default function GradesPage() {
                 {/* Step 3: Grades Table */}
                 {currentStep === 'grades' && (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-md font-medium text-gray-900 persian-text">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                      <h4 className="text-sm sm:text-md font-medium text-gray-900 persian-text">
                         ثبت نمرات برای {selectedStudentData?.full_name}
                       </h4>
                       <button
                         onClick={() => setCurrentStep('student')}
-                        className="text-blue-600 hover:text-blue-800 text-sm persian-text"
+                        className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm persian-text self-start sm:self-auto"
                       >
                         تغییر دانش‌آموز
                       </button>
                     </div>
                     
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                              درس
-                            </th>
-                            {/* Academic year months: Mehr to Khordad */}
-                            {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
-                              <th key={month} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                                {PERSIAN_MONTHS[month as keyof typeof PERSIAN_MONTHS]}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {monthlyGrades.map((mg) => (
-                            <tr key={mg.subject_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
-                                {mg.subject_name}
-                              </td>
-                              {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
-                                <td key={month} className="px-3 py-4 whitespace-nowrap text-center">
-                                  <input
-                                    key={`${mg.subject_id}-${month}`}
-                                    type="number"
-                                    min="0"
-                                    max="20"
-                                    step="0.25"
-                                    value={mg.grades[month] ?? ''}
-                                    onChange={(e) => handleGradeChange(mg.subject_id, month, e.target.value)}
-                                    className="w-16 px-3 py-1 text-sm border border-gray-300 rounded text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="-"
-                                  />
-                                </td>
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
+                      <div className="inline-block min-w-full align-middle">
+                        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="sticky right-0 bg-gray-50 px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text border-l border-gray-200">
+                                  درس
+                                </th>
+                                {/* Academic year months: Mehr to Khordad */}
+                                {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
+                                  <th key={month} className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider persian-text min-w-[60px]">
+                                    <div className="truncate">
+                                      {PERSIAN_MONTHS[month as keyof typeof PERSIAN_MONTHS]}
+                                    </div>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {monthlyGrades.map((mg) => (
+                                <tr key={mg.subject_id}>
+                                  <td className="sticky right-0 bg-white px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 persian-text border-l border-gray-200 max-w-[100px] sm:max-w-none">
+                                    <div className="truncate" title={mg.subject_name}>
+                                      {mg.subject_name}
+                                    </div>
+                                  </td>
+                                  {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
+                                    <td key={month} className="px-2 sm:px-3 py-4 whitespace-nowrap text-center">
+                                      <input
+                                        key={`${mg.subject_id}-${month}`}
+                                        type="number"
+                                        min="0"
+                                        max="20"
+                                        step="0.25"
+                                        value={mg.grades[month] ?? ''}
+                                        onChange={(e) => handleGradeChange(mg.subject_id, month, e.target.value)}
+                                        className="w-12 sm:w-16 px-1 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="-"
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
                               ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Mobile scroll hint */}
+                    <div className="text-xs text-gray-500 persian-text text-center sm:hidden">
+                      برای مشاهده ماه‌های بیشتر، جدول را به چپ بکشید
                     </div>
                   </div>
                 )}
