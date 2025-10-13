@@ -154,29 +154,30 @@ export default function GradesPage() {
         existingGrades
           .filter(g => g.subject_id === subject.id)
           .forEach(g => {
-            const gradeNumber = (g as any).grade_number || 1; // Default to 1 if not set
+            const gradeNumber = (g as Grade & { grade_number?: number }).grade_number || 1; // Default to 1 if not set
             // For existing grades from database, display the original format
             // If it's a string (like "3/5"), use it as is
             // If it's a number, format it properly
             let displayValue: string;
             let numericValue: number;
             
-            if (typeof g.score === 'string') {
+            const score = g.score as number | string; // Type assertion for flexibility
+            if (typeof score === 'string') {
               // It's already in string format (like "3/5")
-              displayValue = g.score;
+              displayValue = score;
               // Calculate numeric value for validation
-              if (g.score.includes('/')) {
-                const [numerator, denominator] = g.score.split('/').map(Number);
+              if (score.includes('/')) {
+                const [numerator, denominator] = score.split('/').map(Number);
                 numericValue = denominator !== 0 ? (numerator / denominator) * 20 : 0;
               } else {
-                numericValue = parseFloat(g.score) || 0;
+                numericValue = parseFloat(score) || 0;
               }
             } else {
               // It's a numeric value, format for display
-              displayValue = g.score % 1 === 0 ? 
-                g.score.toString() : 
-                g.score.toFixed(2).replace(/\.?0+$/, '');
-              numericValue = g.score;
+              displayValue = score % 1 === 0 ? 
+                score.toString() : 
+                score.toFixed(2).replace(/\.?0+$/, '');
+              numericValue = score;
             }
             
             subjectGrades[gradeNumber] = {
@@ -289,7 +290,16 @@ export default function GradesPage() {
       }
 
       // Prepare grades data
-      const gradesToSave: any[] = [];
+      const gradesToSave: Array<{
+        student_id: string;
+        subject_id: string;
+        month: number;
+        grade_number: number;
+        score: number | string;
+        school_year: number;
+        created_by: string;
+        created_at: string;
+      }> = [];
       
       monthlyGrades.forEach(mg => {
         Object.entries(mg.grades).forEach(([gradeNumber, gradeData]) => {

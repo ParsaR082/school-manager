@@ -1,9 +1,3 @@
-import jwt from 'jsonwebtoken';
-import { cookies } from 'next/headers';
-
-// JWT secret key - in production, this should be a strong secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
 export interface ParentSessionData {
   parent_id: string;
   parent_name: string;
@@ -15,105 +9,77 @@ export interface ParentSessionData {
   login_time: string;
 }
 
-export interface ParentAuthResult {
-  authenticated: boolean;
-  session?: ParentSessionData;
-  error?: string;
+export interface ParentAuthResult extends ParentSessionData {
+  access_token: string;
 }
 
 /**
- * ایجاد JWT token برای والد
+ * Get parent session from localStorage (client-side)
  */
-export function createParentToken(sessionData: ParentSessionData): string {
-  return jwt.sign(sessionData, JWT_SECRET, { 
-    expiresIn: '24h' // توکن برای ۲۴ ساعت معتبر است
-  });
-}
-
-/**
- * تأیید اعتبار JWT token والد
- */
-export function verifyParentToken(token: string): ParentSessionData | null {
+export async function getParentSession(): Promise<ParentAuthResult | null> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as ParentSessionData;
-    return decoded;
+    if (typeof window === 'undefined') {
+      return null; // Server-side, return null
+    }
+    
+    const sessionData = localStorage.getItem('parent-session');
+    if (!sessionData) {
+      return null;
+    }
+
+    const session = JSON.parse(sessionData) as ParentAuthResult;
+    
+    // Check if session is expired (24 hours)
+    const loginTime = new Date(session.login_time);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursDiff > 24) {
+      localStorage.removeItem('parent-session');
+      return null;
+    }
+
+    return session;
   } catch (error) {
-    console.error('JWT verification failed:', error);
+    console.error('Error getting parent session:', error);
     return null;
   }
 }
 
 /**
- * تنظیم کوکی نشست والد
+ * Set parent session in localStorage (client-side)
  */
-export async function setParentSessionCookie(token: string) {
-  const cookieStore = await cookies();
-  cookieStore.set('parent_session', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60, // ۲۴ ساعت
-    path: '/',
-  });
-}
-
-/**
- * دریافت نشست والد از کوکی
- */
-export async function getParentSession(): Promise<ParentAuthResult> {
-  try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('parent_session');
-
-    if (!sessionCookie?.value) {
-      return {
-        authenticated: false,
-        error: 'نشست یافت نشد'
-      };
-    }
-
-    const sessionData = verifyParentToken(sessionCookie.value);
-
-    if (!sessionData) {
-      return {
-        authenticated: false,
-        error: 'نشست نامعتبر است'
-      };
-    }
-
-    return {
-      authenticated: true,
-      session: sessionData
-    };
-  } catch (error) {
-    console.error('Session verification error:', error);
-    return {
-      authenticated: false,
-      error: 'خطا در بررسی نشست'
-    };
+export function setParentSession(sessionData: ParentAuthResult): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('parent-session', JSON.stringify(sessionData));
   }
 }
 
 /**
- * حذف نشست والد
+ * Clear parent session from localStorage (client-side)
  */
-export async function clearParentSession(response: unknown) {
-  const cookieStore = await cookies();
-  cookieStore.delete('parent_session');
+export function clearParentSession(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('parent-session');
+  }
 }
 
 /**
- * بررسی اینکه آیا والد وارد شده است یا نه
+ * Check if parent is authenticated (client-side)
  */
 export async function isParentAuthenticated(): Promise<boolean> {
-  const result = await getParentSession();
-  return result.authenticated;
+  const session = await getParentSession();
+  return session !== null;
 }
 
 /**
- * دریافت اطلاعات والد از نشست
+ * Get parent info (client-side)
  */
 export async function getParentInfo(): Promise<ParentSessionData | null> {
-  const result = await getParentSession();
-  return result.authenticated ? result.session! : null;
+  const session = await getParentSession();
+  if (!session) return null;
+  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { access_token, ...parentInfo } = session;
+  return parentInfo;
 }

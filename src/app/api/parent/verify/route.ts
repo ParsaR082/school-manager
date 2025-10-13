@@ -1,32 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getParentSession } from '@/lib/parent-auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const authResult = await getParentSession();
-
-    if (!authResult.authenticated) {
+    
+    if (!authResult) {
       return NextResponse.json(
-        { 
-          authenticated: false, 
-          error: authResult.error || 'نشست یافت نشد' 
-        },
+        { error: 'احراز هویت نامعتبر' },
         { status: 401 }
       );
     }
 
     return NextResponse.json({
-      authenticated: true,
-      session: authResult.session,
+      success: true,
+      session: authResult
     });
-
   } catch (error) {
-    console.error('Session verification error:', error);
+    console.error('Verify error:', error);
     return NextResponse.json(
-      { 
-        authenticated: false, 
-        error: 'خطا در بررسی نشست' 
-      },
+      { error: 'خطا در احراز هویت' },
       { status: 500 }
     );
   }

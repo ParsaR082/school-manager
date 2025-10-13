@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import type { Student, Grade, Subject, Class, SchoolMonth } from '@/lib/types';
+import type { Student, Grade, Subject, Class } from '@/lib/types';
 import { PERSIAN_MONTHS } from '@/lib/types';
+import { getParentSession } from '@/lib/parent-auth';
 
 interface GradeWithSubject extends Grade {
   subject: Subject;
@@ -37,131 +37,60 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
   const [parentSession, setParentSession] = useState<ParentSession | null>(null);
   const [monthlyGrades, setMonthlyGrades] = useState<{ [month: number]: GradeWithSubject[] }>({});
-  const [selectedMonth, setSelectedMonth] = useState<number>(7); // Default to Mehr (month 7)
   const [displayGrades, setDisplayGrades] = useState<MonthlyGrade[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<number>(7); // Default to Mehr (month 7)
   const router = useRouter();
 
-  useEffect(() => {
-    checkParentAuthentication();
-  }, []);
-
-  useEffect(() => {
-    if (student && subjects.length > 0) {
-      prepareDisplayGrades();
-    }
-  }, [selectedMonth, monthlyGrades, student, subjects]);
-
-  const checkParentAuthentication = async () => {
+  const fetchStudentData = useCallback(async () => {
     try {
-      const response = await fetch('/api/parent/verify', { method: 'GET', credentials: 'include' });
-      const result = await response.json();
+      // Fetch all data using API endpoints
+      const [studentsRes, gradesRes, subjectsRes, subjectClassesRes, classesRes] = await Promise.all([
+        fetch('/api/students', { credentials: 'include' }),
+        fetch('/api/grades', { credentials: 'include' }),
+        fetch('/api/subjects', { credentials: 'include' }),
+        fetch('/api/subject-classes', { credentials: 'include' }),
+        fetch('/api/classes', { credentials: 'include' })
+      ]);
 
-      if (!result.authenticated || !result.session) {
-        router.push('/parent/login');
-        return;
+      const [studentsData, gradesData, subjectsData, subjectClassesData, classesData] = await Promise.all([
+        studentsRes.json(),
+        gradesRes.json(),
+        subjectsRes.json(),
+        subjectClassesRes.json(),
+        classesRes.json()
+      ]);
+
+      // Find the student for this parent
+      const currentStudent = studentsData.find((s: Student) => 
+        parentSession?.student_id ? s.id === parentSession.student_id : false
+      );
+
+      if (currentStudent) {
+        // Find the class for this student
+        const studentClass = classesData.find((c: Class) => c.id === currentStudent.class_id);
+        
+        // Get subjects for this class
+        const classSubjects = subjectClassesData
+          .filter((sc: { class_id: string; subject_id: string }) => sc.class_id === currentStudent.class_id)
+          .map((sc: { subject_id: string }) => 
+            subjectsData.find((s: Subject) => s.id === sc.subject_id)
+          )
+          .filter(Boolean);
+
+        // Get grades for this student
+        const studentGrades = gradesData.filter((g: Grade) => g.student_id === currentStudent.id);
+
+        setStudent({ ...currentStudent, class: studentClass });
+        setSubjects(classSubjects);
+        setMonthlyGrades(studentGrades);
       }
-
-      setParentSession(result.session);
-      fetchStudentData(result.session.student_id);
-    } catch (error) {
-      console.error('Authentication check failed:', error);
-      router.push('/parent/login');
-    }
-  };
-
-  const fetchStudentData = async (studentId: string) => {
-    try {
-      setLoading(true);
-
-      if (!studentId) {
-        setStudent(null);
-        return;
-      }
-
-      // Fetch student data using API
-      const studentResponse = await fetch(`/api/students?id=${studentId}`);
-      if (!studentResponse.ok) {
-        console.error('Error fetching student');
-        setStudent(null);
-        return;
-      }
-      const studentsData = await studentResponse.json();
-      const studentData = studentsData.find((s: any) => s.id === studentId);
-      
-      if (!studentData) {
-        console.error('Student not found');
-        setStudent(null);
-        return;
-      }
-
-      // Fetch all grades using API (like admin panel)
-      const gradesResponse = await fetch('/api/grades');
-      if (!gradesResponse.ok) {
-        console.error('Error fetching grades');
-        return;
-      }
-      const allGrades = await gradesResponse.json();
-
-      // Filter grades for this student
-      const studentGrades = allGrades.filter((grade: any) => grade.student_id === studentId);
-
-      // Fetch all subjects for the student's class using API
-      const subjectsResponse = await fetch('/api/subjects');
-      if (!subjectsResponse.ok) {
-        console.error('Error fetching subjects');
-        return;
-      }
-      const allSubjects = await subjectsResponse.json();
-
-      // Fetch subject-classes to get subjects for this class
-      const subjectClassesResponse = await fetch('/api/subject-classes');
-      if (!subjectClassesResponse.ok) {
-        console.error('Error fetching subject-classes');
-        return;
-      }
-      const subjectClasses = await subjectClassesResponse.json();
-
-      // Get subjects for this student's class
-      const classSubjects = subjectClasses
-        .filter((sc: any) => sc.class_id === studentData.class_id)
-        .map((sc: any) => allSubjects.find((s: any) => s.id === sc.subject_id))
-        .filter(Boolean);
-
-      setSubjects(classSubjects);
-
-      // Group grades by month
-      const monthlyGradesData: { [month: number]: GradeWithSubject[] } = {};
-      if (studentGrades) {
-        studentGrades.forEach((grade: any) => {
-          if (!monthlyGradesData[grade.month]) {
-            monthlyGradesData[grade.month] = [];
-          }
-          // Add subject info to grade
-          const subject = allSubjects.find((s: any) => s.id === grade.subject_id);
-          if (subject) {
-            monthlyGradesData[grade.month].push({
-              ...grade,
-              subject
-            });
-          }
-        });
-      }
-
-      setMonthlyGrades(monthlyGradesData);
-      setStudent({
-        ...studentData,
-        grades: studentGrades || []
-      } as StudentWithGrades);
     } catch (error) {
       console.error('Error fetching student data:', error);
-      setStudent(null);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [parentSession?.student_id]);
 
-  const prepareDisplayGrades = () => {
+  const prepareDisplayGrades = useCallback(() => {
     if (!student || subjects.length === 0) return;
 
     const currentMonthGrades = monthlyGrades[selectedMonth] || [];
@@ -173,35 +102,45 @@ export default function ParentDashboard() {
       for (let gradeNum = 1; gradeNum <= 10; gradeNum++) {
         subjectGrades[gradeNum] = null;
       }
-      
-      // Fill existing grades for this month and subject (like admin panel)
+
+      // Fill in actual grades
       currentMonthGrades
-        .filter(g => g.subject.id === subject.id)
-        .forEach(g => {
-          const gradeNumber = (g as any).grade_number || 1;
-          // Handle both string and numeric scores like admin panel
-          let displayValue: string;
-          
-          if (typeof g.score === 'string') {
-            displayValue = g.score;
-          } else {
-            displayValue = g.score % 1 === 0 ? 
-              g.score.toString() : 
-              g.score.toFixed(2).replace(/\.?0+$/, '');
-          }
-          
-          subjectGrades[gradeNumber] = displayValue;
+        .filter((grade: Grade & { grade_number?: number }) => grade.subject_id === subject.id)
+        .forEach((grade: Grade & { grade_number?: number }) => {
+          const gradeNumber = grade.grade_number || 1;
+          subjectGrades[gradeNumber] = grade.score.toString();
         });
-      
+
       return {
         subject_id: subject.id,
         subject_name: subject.name,
         grades: subjectGrades
       };
     });
-    
+
     setDisplayGrades(displayGradesData);
-  };
+  }, [student, subjects, monthlyGrades, selectedMonth]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const session = await getParentSession();
+      if (!session) {
+        router.push('/parent/login');
+        return;
+      }
+      setParentSession(session);
+      setLoading(false);
+      fetchStudentData();
+    };
+
+    checkAuth();
+  }, [router, fetchStudentData]);
+
+  useEffect(() => {
+    if (student && subjects.length > 0) {
+      prepareDisplayGrades();
+    }
+  }, [monthlyGrades, student, subjects, prepareDisplayGrades]);
 
   const handleLogout = async () => {
     await fetch('/api/parent/logout', { method: 'POST', credentials: 'include' });
