@@ -46,8 +46,8 @@ export function verifyParentToken(token: string): ParentSessionData | null {
 /**
  * تنظیم کوکی نشست والد
  */
-export function setParentSessionCookie(token: string) {
-  const cookieStore = cookies();
+export async function setParentSessionCookie(token: string) {
+  const cookieStore = await cookies();
   cookieStore.set('parent_session', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -60,9 +60,9 @@ export function setParentSessionCookie(token: string) {
 /**
  * دریافت نشست والد از کوکی
  */
-export function getParentSession(): ParentAuthResult {
+export async function getParentSession(): Promise<ParentAuthResult> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('parent_session');
 
     if (!sessionCookie?.value) {
@@ -97,23 +97,23 @@ export function getParentSession(): ParentAuthResult {
 /**
  * حذف نشست والد
  */
-export function clearParentSession(response: unknown) {
-  const cookieStore = cookies();
+export async function clearParentSession(response: unknown) {
+  const cookieStore = await cookies();
   cookieStore.delete('parent_session');
 }
 
 /**
  * بررسی اینکه آیا والد وارد شده است یا نه
  */
-export function isParentAuthenticated(): boolean {
-  const result = getParentSession();
+export async function isParentAuthenticated(): Promise<boolean> {
+  const result = await getParentSession();
   return result.authenticated;
 }
 
 /**
  * دریافت اطلاعات والد از نشست
  */
-export function getParentInfo(): ParentSessionData | null {
-  const result = getParentSession();
+export async function getParentInfo(): Promise<ParentSessionData | null> {
+  const result = await getParentSession();
   return result.authenticated ? result.session! : null;
 }

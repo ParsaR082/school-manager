@@ -3,7 +3,7 @@ import { getParentSession } from '@/lib/parent-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = getParentSession();
+    const authResult = await getParentSession();
 
     if (!authResult.authenticated) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { 
         authenticated: false, 
-        error: 'خطای داخلی سرور' 
+        error: 'خطا در بررسی نشست' 
       },
       { status: 500 }
     );
