@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if supabaseAdmin is available
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Find student by national_id and join with parent to verify phone
     const { data: result, error } = await supabaseAdmin
       .from('students')
@@ -47,7 +55,7 @@ export async function POST(request: NextRequest) {
       .eq('parents.phone', phone)
       .single();
 
-    if (error || !result) {
+    if (error || !result || !result.parents || result.parents.length === 0) {
       return NextResponse.json(
         { error: 'کد ملی دانش‌آموز یا شماره تلفن والدین صحیح نیست' },
         { status: 401 }
@@ -58,8 +66,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       parent: {
-        id: result.parents.id,
-        full_name: result.parents.full_name
+        id: result.parents[0].id,
+        full_name: result.parents[0].full_name
       },
       student: {
         id: result.id,
