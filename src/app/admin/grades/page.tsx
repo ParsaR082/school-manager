@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
 import { supabase } from '@/lib/supabase';
-import type { Grade, Student, Subject, Class } from '@/lib/types';
+import type { Grade, Student, Subject, Class, SubjectClass } from '@/lib/types';
 import { PERSIAN_MONTHS } from '@/lib/types';
 
 const gradeSchema = z.object({
@@ -28,7 +28,7 @@ export default function GradesPage() {
   const [grades, setGrades] = useState<GradeWithDetails[]>([]);
   const [students, setStudents] = useState<(Student & { class?: Class })[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [subjectClasses, setSubjectClasses] = useState<any[]>([]);
+  const [subjectClasses, setSubjectClasses] = useState<SubjectClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<GradeWithDetails | null>(null);
