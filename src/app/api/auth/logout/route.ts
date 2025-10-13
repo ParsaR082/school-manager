@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Get the access token from cookies
     const cookieStore = await cookies();

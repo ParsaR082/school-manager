@@ -11,7 +11,7 @@ export async function GET() {
       .from('grades')
       .select(`
         *,
-        student:students(id, full_name),
+        student:students(id, full_name, class:classes(id, name)),
         subject:subjects(id, name)
       `)
       .order('created_at', { ascending: false });
@@ -118,24 +118,40 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
     }
     
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const body = await request.json();
+    
+    // Handle single grade deletion by ID
+    if (body.id) {
+      const { error } = await supabaseAdmin
+        .from('grades')
+        .delete()
+        .eq('id', body.id);
 
-    if (!id) {
-      return NextResponse.json({ error: 'Grade ID is required' }, { status: 400 });
+      if (error) {
+        console.error('Error deleting grade:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+    
+    // Handle bulk deletion by student and school year
+    if (body.student_id && body.school_year) {
+      const { error } = await supabaseAdmin
+        .from('grades')
+        .delete()
+        .eq('student_id', body.student_id)
+        .eq('school_year', body.school_year);
+
+      if (error) {
+        console.error('Error deleting grades:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
     }
 
-    const { error } = await supabaseAdmin
-      .from('grades')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting grade:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ error: 'Either grade ID or student_id with school_year is required' }, { status: 400 });
   } catch (error) {
     console.error('Error in DELETE /api/grades:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

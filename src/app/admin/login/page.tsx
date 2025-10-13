@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { loginUser, verifyAuth, isAuthenticated, redirectToAdmin } from '@/lib/auth-client';
 
 export default function AdminLogin() {
@@ -11,7 +10,6 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const router = useRouter();
 
   // Check if user is already authenticated
   useEffect(() => {
