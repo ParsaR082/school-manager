@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import type { Student, Grade, Subject, MonthlyGrades } from '@/lib/types';
+import type { Student, Grade, Subject } from '@/lib/types';
 import { PERSIAN_MONTHS } from '@/lib/types';
 
 interface GradeWithSubject extends Grade {
@@ -22,6 +22,62 @@ export default function ParentDashboard() {
   const [monthlyGrades, setMonthlyGrades] = useState<{ [month: number]: GradeWithSubject[] }>({});
   const router = useRouter();
 
+  const fetchStudentData = useCallback(async (parentId: string) => {
+    try {
+      // Fetch student data
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select(`
+          *,
+          class:classes(id, name)
+        `)
+        .eq('parent_id', parentId)
+        .single();
+
+      if (studentError) {
+        console.error('Error fetching student:', studentError);
+        return;
+      }
+
+      // Fetch grades for the selected year
+      const { data: gradesData, error: gradesError } = await supabase
+        .from('grades')
+        .select(`
+          *,
+          subject:subjects(id, name)
+        `)
+        .eq('student_id', studentData.id)
+        .eq('school_year', selectedYear);
+
+      if (gradesError) {
+        console.error('Error fetching grades:', gradesError);
+        return;
+      }
+
+      const studentWithGrades: StudentWithGrades = {
+        ...studentData,
+        grades: gradesData as GradeWithSubject[]
+      };
+
+      setStudent(studentWithGrades);
+
+      // Group grades by month
+      const gradesByMonth: { [month: number]: GradeWithSubject[] } = {};
+      gradesData.forEach((grade: GradeWithSubject) => {
+        if (!gradesByMonth[grade.month]) {
+          gradesByMonth[grade.month] = [];
+        }
+        gradesByMonth[grade.month].push(grade);
+      });
+
+      setMonthlyGrades(gradesByMonth);
+    } catch (error) {
+      console.error('Error in fetchStudentData:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedYear]);
+
   useEffect(() => {
     // Check if parent is logged in
     const parentId = localStorage.getItem('parent_id');
@@ -37,55 +93,7 @@ export default function ParentDashboard() {
     }
 
     fetchStudentData(parentId);
-  }, [router, selectedYear]);
-
-  const fetchStudentData = async (parentId: string) => {
-    try {
-      // Fetch student data
-      const { data: studentData, error: studentError } = await supabase
-        .from('students')
-        .select(`
-          *,
-          class:classes(id, name)
-        `)
-        .eq('parent_id', parentId)
-        .single();
-
-      if (studentError) throw studentError;
-
-      // Fetch grades for the selected year
-      const { data: gradesData, error: gradesError } = await supabase
-        .from('grades')
-        .select(`
-          *,
-          subject:subjects(id, name)
-        `)
-        .eq('student_id', studentData.id)
-        .eq('school_year', selectedYear)
-        .order('month', { ascending: true });
-
-      if (gradesError) throw gradesError;
-
-      // Organize grades by month
-      const monthlyGradesData: { [month: number]: GradeWithSubject[] } = {};
-      gradesData.forEach((grade: GradeWithSubject) => {
-        if (!monthlyGradesData[grade.month]) {
-          monthlyGradesData[grade.month] = [];
-        }
-        monthlyGradesData[grade.month].push(grade);
-      });
-
-      setStudent({
-        ...studentData,
-        grades: gradesData || [],
-      });
-      setMonthlyGrades(monthlyGradesData);
-    } catch (error) {
-      console.error('Error fetching student data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [router, selectedYear, fetchStudentData]);
 
   const handleLogout = () => {
     localStorage.removeItem('parent_id');

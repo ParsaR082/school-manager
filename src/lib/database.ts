@@ -1,5 +1,5 @@
-import { supabase, supabaseAdmin } from './supabase';
-import { Class, Subject, Student, Parent, Grade, SubjectClass } from './types';
+import { supabase } from './supabase';
+import { Class, Subject, Student, Parent, Grade } from './types';
 
 // Classes CRUD operations
 export async function getClasses() {

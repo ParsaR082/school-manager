@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,8 +76,6 @@ export async function POST(request: NextRequest) {
 
     // Set secure cookies for session management
     if (authData.session) {
-      const cookieStore = await cookies();
-      
       // Set access token cookie
       response.cookies.set('sb-access-token', authData.session.access_token, {
         httpOnly: true,

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
-import { verifyAuth, logoutUser, getUserFromCookie, isAuthenticated } from '@/lib/auth-client';
+import { verifyAuth, logoutUser, getUserFromCookie } from '@/lib/auth-client';
 
 interface AdminLayoutProps {
   children: ReactNode;

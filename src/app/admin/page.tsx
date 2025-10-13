@@ -1,6 +1,40 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 
+interface DashboardStats {
+  classes: number;
+  subjects: number;
+  students: number;
+}
+
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats>({
+    classes: 0,
+    subjects: 0,
+    students: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/stats');
+        if (!response.ok) {
+          throw new Error('Failed to fetch stats');
+        }
+        const data = await response.json();
+        setStats(data);
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
   return (
     <AdminLayout>
       <div className="space-y-responsive fade-in">
@@ -15,7 +49,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-responsive">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-responsive">
           <div className="card card-hover p-responsive">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 flex-shrink-0">
@@ -25,7 +59,9 @@ export default function AdminDashboard() {
               </div>
               <div className="mr-4 min-w-0">
                 <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل کلاس‌ها</p>
-                <p className="text-responsive-xl font-bold text-gray-900">-</p>
+                <p className="text-responsive-xl font-bold text-gray-900">
+                  {loading ? '...' : stats.classes}
+                </p>
               </div>
             </div>
           </div>
@@ -39,7 +75,9 @@ export default function AdminDashboard() {
               </div>
               <div className="mr-4 min-w-0">
                 <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل دروس</p>
-                <p className="text-responsive-xl font-bold text-gray-900">-</p>
+                <p className="text-responsive-xl font-bold text-gray-900">
+                  {loading ? '...' : stats.subjects}
+                </p>
               </div>
             </div>
           </div>
@@ -53,24 +91,13 @@ export default function AdminDashboard() {
               </div>
               <div className="mr-4 min-w-0">
                 <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل دانش‌آموزان</p>
-                <p className="text-responsive-xl font-bold text-gray-900">-</p>
+                <p className="text-responsive-xl font-bold text-gray-900">
+                  {loading ? '...' : stats.students}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="card card-hover p-responsive">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-gradient-to-r from-orange-100 to-orange-200 text-orange-600 flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div className="mr-4 min-w-0">
-                <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل والدین</p>
-                <p className="text-responsive-xl font-bold text-gray-900">-</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Quick Actions */}
