@@ -68,14 +68,21 @@ export default function RootLayout({
         
         {/* Icons */}
         <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.svg" />
-        <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icon-192x192.svg" />
-        <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icon-192x192.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="mask-icon" href="/apple-touch-icon.svg" color="#2563eb" />
         
+        {/* Additional icon sizes for better compatibility */}
+        <link rel="icon" type="image/png" sizes="48x48" href="/icon-48x48.png" />
+        <link rel="icon" type="image/png" sizes="72x72" href="/icon-72x72.png" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/icon-96x96.png" />
+        <link rel="icon" type="image/png" sizes="144x144" href="/icon-144x144.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+        
         {/* Splash Screens for iOS */}
-        <link rel="apple-touch-startup-image" href="/apple-touch-icon.svg" />
+        <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
         
         {/* Prevent zoom on input focus (iOS) */}
         <meta name="format-detection" content="telephone=no" />

@@ -1,0 +1,40 @@
+<svg width="144" height="144" viewBox="0 0 144 144" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient144" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="roofGradient144" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="72" cy="72" r="72" fill="url(#bgGradient144)"/>
+  
+  <!-- School building - centered and simplified -->
+  <g transform="translate(72, 72)">
+    <!-- Main building -->
+    <rect x="-30" y="-8" width="60" height="38" fill="white" rx="3"/>
+    
+    <!-- Triangular roof -->
+    <path d="M-38 -8 L0 -30 L38 -8 Z" fill="url(#roofGradient144)"/>
+    
+    <!-- Door -->
+    <rect x="-6" y="8" width="12" height="22" fill="#1d4ed8" rx="1.5"/>
+    <circle cx="3" cy="19" r="1.5" fill="white"/>
+    
+    <!-- Windows - symmetrical -->
+    <rect x="-22" y="-3" width="9" height="9" fill="#1d4ed8" rx="1.5"/>
+    <rect x="-22" y="6" width="9" height="9" fill="#1d4ed8" rx="1.5"/>
+    
+    <rect x="13" y="-3" width="9" height="9" fill="#1d4ed8" rx="1.5"/>
+    <rect x="13" y="6" width="9" height="9" fill="#1d4ed8" rx="1.5"/>
+    
+    <!-- Small decorative elements -->
+    <rect x="-1.5" y="-26" width="3" height="11" fill="#fbbf24"/>
+    <rect x="-4.5" y="-26" width="9" height="3" fill="#f59e0b"/>
+  </g>
+</svg>
