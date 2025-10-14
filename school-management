@@ -1,0 +1,150 @@
+[33mcommit 0d516176828b0fbf6994e450a864be20e827ab7a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Tue Oct 14 00:03:14 2025 +0330
+
+    fixed build errors
+
+[33mcommit 971c3d5949aa231588204477094b8ca164fa8413[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 23:47:15 2025 +0330
+
+    enhanced the mobile version
+
+[33mcommit 548e082c565475c9b825284d0e85471fee9501af[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 23:36:35 2025 +0330
+
+    fixed the parent login bug
+
+[33mcommit 621306f681c732304e5798da33fdfa71acf76c09[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 23:25:20 2025 +0330
+
+    اولین نسخه پروژه
+
+[33mcommit 8e8f08bedafb66006d326a5a3feca5edb3c80560[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 23:13:33 2025 +0330
+
+    inhanced the project
+
+[33mcommit 0c8eaf616db1e7c1cd04f6f511ba47091e37979a[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 21:10:58 2025 +0330
+
+    merged the two last commits
+
+[33mcommit 06127c316e77ae3462d8136186717551a0b83f66[m
+Merge: cb76658 6e9a88f
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 19:59:27 2025 +0330
+
+    Merge remote changes: Keep admin panel updates and resolve parent dashboard conflicts
+
+[33mcommit cb76658af5a13252706903a36766bc81eca1d350[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 19:53:17 2025 +0330
+
+    added the parents panel
+
+[33mcommit 6e9a88f32b242b27ea57687d6e83423325f37d74[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 19:17:25 2025 +0330
+
+    fixed the mobile view
+
+[33mcommit f72e36ddcadffa1789157635175a60384c070612[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 19:07:30 2025 +0330
+
+    fixed the grade ui and the dashboard and deleted the unneccery files
+
+[33mcommit 34d9833aa3251d2bc1077a9ab863b8ec409f8bab[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 16:50:14 2025 +0330
+
+    resolve conflict: removed old parent auth route
+
+[33mcommit 3af8777ad0fc99a46734bf874a775d758813a285[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 16:40:48 2025 +0330
+
+    fixed the mobile view
+
+[33mcommit cf9a513e66807e209367100c3e35593f7f4f7076[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 16:05:30 2025 +0330
+
+    fixed the buildig errors
+
+[33mcommit 4084da76501286bfbe5273e3a84735b8cafd6189[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 15:57:39 2025 +0330
+
+    enhanced the ui
+
+[33mcommit 4cfe0bd24f2aec2df610ac479abcfb4f18f115db[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 14:52:53 2025 +0330
+
+    testing parent dashboard
+
+[33mcommit 377b4f99a8c4dcf75bfb0018f3a66c0fc1e90f94[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Mon Oct 13 03:55:52 2025 +0330
+
+    fixed admin grade pages
+
+[33mcommit 61a8dc13ee3c0a525abc0d442bf347e719907ab9[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 02:03:34 2025 +0330
+
+    Assigning subjects to classes fixed.
+
+[33mcommit 7b9d338244d02e0ad496c65bd8ece3fe915a46e0[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 01:06:40 2025 +0330
+
+    Adding Grades Error Solved.
+
+[33mcommit ee43e7cd48a931ba24b7e32bdcb429292469b536[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Mon Oct 13 00:47:54 2025 +0330
+
+    Adding objects Error Solved.
+
+[33mcommit 1d5aee1e8438a8156d5d8d715dae5a7e6d09ac67[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Sun Oct 12 23:45:48 2025 +0330
+
+    ready for vercel deployment
+
+[33mcommit 7f1b78938de1c26f45d53f0b5a60754364b377b5[m
+Author: Mahdi <mahdihosseinzadeh.uut1401@gmail.com>
+Date:   Sun Oct 12 23:11:42 2025 +0330
+
+    test
+
+[33mcommit 282693c4ac80a3c2d45931030eda1a0dfa3eecc9[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Sun Oct 12 22:32:05 2025 +0330
+
+    pushing to github
+
+[33mcommit 01b067cd64d47eaa548f6a9e6a23eb7af29ff4ac[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Fri Oct 10 22:37:59 2025 +0330
+
+    fixing login bug
+
+[33mcommit c9db8aff046003bb771954782210b1649212be8b[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Fri Oct 10 21:04:32 2025 +0330
+
+    initial commit
+
+[33mcommit 9e2b58d09f19f7d76c3794c35e52ddd09e00e9cb[m
+Author: Parsa <prahmani082@gmail.com>
+Date:   Fri Oct 10 19:18:33 2025 +0330
+
+    Initial commit from Create Next App
