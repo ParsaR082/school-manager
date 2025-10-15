@@ -39,7 +39,17 @@ export default function ParentDashboard() {
   const [displayGrades, setDisplayGrades] = useState<MonthlyGrade[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<number>(7); // Default to Mehr (month 7)
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Prevent access to admin routes from parent PWA
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/admin')) {
+      router.replace('/parent/login');
+      return;
+    }
+  }, [router]);
 
   const fetchStudentData = useCallback(async () => {
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,6 +27,15 @@ export default function ParentLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Prevent access to admin routes from parent PWA
+  useEffect(() => {
+    // Check if user is trying to access admin routes
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/admin')) {
+      router.replace('/parent/login');
+    }
+  }, [router]);
 
   const {
     register,
