@@ -33,23 +33,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'رمز عبور اشتباه است' }, { status: 401 });
     }
 
-    // Find student and parent
+    // Find student
     const { data: student, error: studentError } = await supabaseAdmin
       .from('students')
       .select(`
         id,
         full_name,
         national_id,
-        parent:parents(
-          id,
-          full_name
-        )
+        class_id,
+        parent_id
       `)
       .eq('national_id', student_national_id)
       .single();
 
     if (studentError || !student) {
       return NextResponse.json({ error: 'دانش‌آموز یافت نشد' }, { status: 404 });
+    }
+
+    // Find parent
+    const { data: parent, error: parentError } = await supabaseAdmin
+      .from('parents')
+      .select(`
+        id,
+        full_name
+      `)
+      .eq('id', student.parent_id)
+      .single();
+
+    if (parentError || !parent) {
+      return NextResponse.json({ error: 'اطلاعات والدین یافت نشد' }, { status: 404 });
     }
 
     // مرحله ۵: واکشی نمرات دانش‌آموز

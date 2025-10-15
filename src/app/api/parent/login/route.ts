@@ -42,8 +42,7 @@ export async function POST(request: NextRequest) {
         full_name, 
         national_id, 
         class_id,
-        parent_id,
-        parents!inner(id, full_name)
+        parent_id
       `)
       .eq('national_id', student_national_id)
       .single();
@@ -52,7 +51,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'دانش‌آموزی با این کد ملی یافت نشد' }, { status: 401 });
     }
 
-    const parent = student.parents;
+    // پیدا کردن والد
+    const { data: parent, error: parentError } = await supabase
+      .from('parents')
+      .select(`
+        id, 
+        full_name
+      `)
+      .eq('id', student.parent_id)
+      .single();
+
+    if (parentError || !parent) {
+      return NextResponse.json({ success: false, error: 'اطلاعات والدین یافت نشد' }, { status: 404 });
+    }
 
     // ایجاد JWT
     const sessionData = {
