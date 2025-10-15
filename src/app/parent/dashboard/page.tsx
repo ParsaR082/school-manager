@@ -18,7 +18,6 @@ interface StudentWithGrades extends Omit<Student, 'class'> {
 interface ParentSession {
   parent_id: string;
   parent_name: string;
-  parent_phone: string;
   student_id: string;
   student_name: string;
   student_national_id: string;

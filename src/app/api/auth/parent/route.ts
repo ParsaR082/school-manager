@@ -8,12 +8,12 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { national_id, phone } = await request.json();
+    const { national_id } = await request.json();
 
     // Validate input
-    if (!national_id || !phone) {
+    if (!national_id) {
       return NextResponse.json(
-        { error: 'کد ملی دانش‌آموز و شماره تلفن والدین الزامی است' },
+        { error: 'کد ملی دانش‌آموز الزامی است' },
         { status: 400 }
       );
     }
@@ -26,14 +26,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate phone format (11 digits starting with 09)
-    if (!/^09\d{9}$/.test(phone)) {
-      return NextResponse.json(
-        { error: 'شماره تلفن باید ۱۱ رقم و با ۰۹ شروع شود' },
-        { status: 400 }
-      );
-    }
-
     // Check if supabaseAdmin is available
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -42,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find student by national_id and join with parent to verify phone
+    // Find student by national_id
     const { data: result, error } = await supabaseAdmin
       .from('students')
       .select(`
@@ -52,17 +44,15 @@ export async function POST(request: NextRequest) {
         parent_id,
         parents (
           id,
-          full_name,
-          phone
+          full_name
         )
       `)
       .eq('national_id', national_id)
-      .eq('parents.phone', phone)
       .single();
 
-    if (error || !result || !result.parents || result.parents.length === 0) {
+    if (error || !result || !result.parents) {
       return NextResponse.json(
-        { error: 'کد ملی دانش‌آموز یا شماره تلفن والدین صحیح نیست' },
+        { error: 'کد ملی دانش‌آموز صحیح نیست' },
         { status: 401 }
       );
     }

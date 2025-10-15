@@ -1,7 +1,6 @@
 export interface ParentSessionData {
   parent_id: string;
   parent_name: string;
-  parent_phone: string;
   student_id: string;
   student_name: string;
   student_national_id: string;

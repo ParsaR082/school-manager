@@ -8,17 +8,20 @@ import { z } from 'zod';
 
 // Schema for form validation
 const loginSchema = z.object({
-  student_national_id: z
-    .string()
-    .min(1, 'کد ملی دانش‌آموز الزامی است')
-    .regex(/^\d{10}$/, 'کد ملی باید دقیقاً ۱۰ رقم باشد'),
-  parent_phone: z
-    .string()
-    .min(1, 'شماره تلفن والدین الزامی است')
-    .regex(/^09\d{9}$/, 'شماره تلفن باید با ۰۹ شروع شود و ۱۱ رقم باشد'),
+  student_national_id: z.string()
+    .min(10, 'کد ملی باید ۱۰ رقم باشد')
+    .max(10, 'کد ملی باید ۱۰ رقم باشد')
+    .regex(/^\d+$/, 'کد ملی باید فقط شامل عدد باشد'),
+  password: z.string()
+    .min(6, 'رمز عبور باید ۶ رقم باشد')
+    .max(6, 'رمز عبور باید ۶ رقم باشد')
+    .regex(/^\d+$/, 'رمز عبور باید فقط شامل عدد باشد'),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+interface LoginFormData {
+  student_national_id: string;
+  password: string;
+}
 
 export default function ParentLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +47,7 @@ export default function ParentLoginPage() {
       },
       body: JSON.stringify({
         student_national_id: data.student_national_id,
-        parent_phone: data.parent_phone,
+        password: data.password,
       }),
     });
 
@@ -55,7 +58,6 @@ export default function ParentLoginPage() {
       const sessionData = {
         parent_id: result.data.parent.id,
         parent_name: result.data.parent.name,
-        parent_phone: result.data.parent.phone,
         student_id: result.data.student.id,
         student_name: result.data.student.name,
         student_national_id: result.data.student.national_id,
@@ -114,7 +116,7 @@ export default function ParentLoginPage() {
                 type="text"
                 id="student_national_id"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-gray-50 text-gray-900 placeholder-gray-500"
-                placeholder="مثال: 1234567890"
+                placeholder="کدملی را وارد کنید"
                 maxLength={10}
                 dir="ltr"
               />
@@ -123,22 +125,22 @@ export default function ParentLoginPage() {
               )}
             </div>
 
-            {/* Parent Phone */}
+            {/* Password */}
             <div>
-              <label htmlFor="parent_phone" className="block text-sm font-medium text-gray-700 mb-2">
-                شماره تلفن والدین
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                رمز عبور 
               </label>
               <input
-                {...register('parent_phone')}
-                type="text"
-                id="parent_phone"
+                {...register('password')}
+                type="password"
+                id="password"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-gray-50 text-gray-900 placeholder-gray-500"
-                placeholder="مثال: 09123456789"
-                maxLength={11}
+                placeholder="رمز عبور را وارد کنید"
+                maxLength={6}
                 dir="ltr"
               />
-              {errors.parent_phone && (
-                <p className="mt-1 text-sm text-red-600">{errors.parent_phone.message}</p>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
 
@@ -177,10 +179,6 @@ export default function ParentLoginPage() {
             <div className="flex items-start">
               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2 flex-shrink-0"></span>
               <span>کد ملی دانش‌آموز را وارد کنید (۱۰ رقم)</span>
-            </div>
-            <div className="flex items-start">
-              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2 flex-shrink-0"></span>
-              <span>شماره تلفن والدین را وارد کنید (۱۱ رقم، با ۰۹ شروع شود)</span>
             </div>
             <div className="flex items-start">
               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2 flex-shrink-0"></span>

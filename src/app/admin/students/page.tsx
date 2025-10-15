@@ -9,10 +9,9 @@ import type { Student, Class } from '@/lib/types';
 
 const studentSchema = z.object({
   full_name: z.string().min(1, 'نام و نام خانوادگی الزامی است'),
-  national_id: z.string().min(10, 'کد ملی باید ۱۰ رقم باشد').max(10, 'کد ملی باید ۱۰ رقم باشد'),
-  parent_full_name: z.string().min(1, 'نام والدین الزامی است'),
-  parent_phone: z.string().min(11, 'شماره تلفن باید ۱۱ رقم باشد'),
+  national_id: z.string().regex(/^\d{10}$/, 'کد ملی باید دقیقاً ۱۰ رقم باشد'),
   class_id: z.string().min(1, 'انتخاب کلاس الزامی است'),
+  parent_full_name: z.string().min(1, 'نام والدین الزامی است'),
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
@@ -21,7 +20,6 @@ interface StudentWithClass extends Omit<Student, 'parent'> {
   class?: Class;
   parent?: {
     full_name: string;
-    phone: string;
   };
 }
 
@@ -95,7 +93,6 @@ export default function StudentsPage() {
             national_id: data.national_id,
             class_id: data.class_id,
             parent_full_name: data.parent_full_name,
-            parent_phone: data.parent_phone,
           }),
         });
 
@@ -114,7 +111,6 @@ export default function StudentsPage() {
             national_id: data.national_id,
             class_id: data.class_id,
             parent_full_name: data.parent_full_name,
-            parent_phone: data.parent_phone,
           }),
         });
 
@@ -158,7 +154,6 @@ export default function StudentsPage() {
       full_name: student.full_name,
       national_id: student.national_id,
       parent_full_name: student.parent?.full_name || '',
-      parent_phone: student.parent?.phone || '',
       class_id: student.class_id,
     });
     setIsModalOpen(true);
@@ -171,7 +166,6 @@ export default function StudentsPage() {
       full_name: '',
       national_id: '',
       parent_full_name: '',
-      parent_phone: '',
       class_id: '',
     });
     setIsModalOpen(true);
@@ -252,12 +246,6 @@ export default function StudentsPage() {
                           {student.parent?.full_name}
                         </span>
                       </div>
-                      <div>
-                        <span className="text-gray-500 persian-text">تلفن: </span>
-                        <span className="text-gray-900" dir="ltr">
-                          {student.parent?.phone}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -283,9 +271,6 @@ export default function StudentsPage() {
                     نام والدین
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    تلفن والدین
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
                     عملیات
                   </th>
                 </tr>
@@ -293,7 +278,7 @@ export default function StudentsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 persian-text">
+                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500 persian-text">
                       هیچ دانش‌آموزی یافت نشد
                     </td>
                   </tr>
@@ -311,9 +296,6 @@ export default function StudentsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
                         {student.parent?.full_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {student.parent?.phone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2 space-x-reverse">
@@ -419,23 +401,6 @@ export default function StudentsPage() {
                     {errors.parent_full_name && (
                       <p className="mt-1 text-sm text-red-600 persian-text">
                         {errors.parent_full_name.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 persian-text mb-1">
-                      شماره تلفن والدین
-                    </label>
-                    <input
-                      type="text"
-                      {...register('parent_phone')}
-                      className="form-input"
-                      placeholder="09123456789"
-                    />
-                    {errors.parent_phone && (
-                      <p className="mt-1 text-sm text-red-600 persian-text">
-                        {errors.parent_phone.message}
                       </p>
                     )}
                   </div>

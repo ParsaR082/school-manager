@@ -12,7 +12,7 @@ export async function GET() {
       .select(`
         *,
         class:classes(id, name),
-        parent:parents(full_name, phone)
+        parent:parents(full_name)
       `)
       .order('full_name');
 
@@ -35,42 +35,29 @@ export async function POST(request: Request) {
     }
     
     const body = await request.json();
-    const { full_name, national_id, class_id, parent_full_name, parent_phone } = body;
+    const { full_name, national_id, class_id, parent_full_name } = body;
 
-    if (!full_name || !national_id || !class_id || !parent_full_name || !parent_phone) {
+    if (!full_name || !national_id || !class_id || !parent_full_name) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'تمام فیلدها الزامی هستند' },
         { status: 400 }
       );
     }
 
     // First, create or find the parent
-    let parent_id: string;
-    
-    // Check if parent already exists with this phone number
-    const { data: existingParent } = await supabaseAdmin
+    // Create new parent (no need to check for existing since we removed phone)
+    const { data: newParent, error: parentError } = await supabaseAdmin
       .from('parents')
+      .insert([{ full_name: parent_full_name }])
       .select('id')
-      .eq('phone', parent_phone)
       .single();
 
-    if (existingParent) {
-      parent_id = existingParent.id;
-    } else {
-      // Create new parent
-      const { data: newParent, error: parentError } = await supabaseAdmin
-        .from('parents')
-        .insert([{ full_name: parent_full_name, phone: parent_phone }])
-        .select('id')
-        .single();
-
-      if (parentError) {
-        console.error('Error creating parent:', parentError);
-        return NextResponse.json({ error: parentError.message }, { status: 500 });
-      }
-
-      parent_id = newParent.id;
+    if (parentError) {
+      console.error('Error creating parent:', parentError);
+      return NextResponse.json({ error: parentError.message }, { status: 500 });
     }
+
+    const parent_id = newParent.id;
 
     // Now create the student
     const { data, error } = await supabaseAdmin
@@ -79,7 +66,7 @@ export async function POST(request: Request) {
       .select(`
         *,
         class:classes(id, name),
-        parent:parents(full_name, phone)
+        parent:parents(full_name)
       `)
       .single();
 
@@ -102,9 +89,9 @@ export async function PUT(request: Request) {
     }
     
     const body = await request.json();
-    const { id, full_name, national_id, class_id, parent_full_name, parent_phone } = body;
+    const { id, full_name, national_id, class_id, parent_full_name } = body;
 
-    if (!id || !full_name || !national_id || !class_id || !parent_full_name || !parent_phone) {
+    if (!id || !full_name || !national_id || !class_id || !parent_full_name) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -126,7 +113,7 @@ export async function PUT(request: Request) {
     // Update the parent information
     const { error: parentError } = await supabaseAdmin
       .from('parents')
-      .update({ full_name: parent_full_name, phone: parent_phone })
+      .update({ full_name: parent_full_name })
       .eq('id', currentStudent.parent_id);
 
     if (parentError) {
@@ -142,7 +129,7 @@ export async function PUT(request: Request) {
       .select(`
         *,
         class:classes(id, name),
-        parent:parents(full_name, phone)
+        parent:parents(full_name)
       `)
       .single();
 

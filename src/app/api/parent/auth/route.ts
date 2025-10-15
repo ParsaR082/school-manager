@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { supabaseAdmin } from '@/lib/supabase';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,86 +10,46 @@ const supabase = createClient(
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { phone, national_id } = await request.json();
-
-    // مرحله ۱: اعتبارسنجی ورودی‌ها
-    if (!phone || !national_id) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'شماره تلفن والد و کد ملی دانش‌آموز الزامی است' 
-        },
-        { status: 400 }
-      );
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
     }
 
-    // بررسی فرمت شماره تلفن (11 رقم و شروع با 09)
-    if (!/^09\d{9}$/.test(phone)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'فرمت شماره تلفن صحیح نیست' 
-        },
-        { status: 400 }
-      );
+    const { student_national_id, password } = await request.json();
+
+    if (!student_national_id || !password) {
+      return NextResponse.json({ error: 'کد ملی دانش‌آموز و رمز عبور الزامی است' }, { status: 400 });
     }
 
-    // بررسی فرمت کد ملی (10 رقم)
-    if (!/^\d{10}$/.test(national_id)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'کد ملی باید 10 رقم باشد' 
-        },
-        { status: 400 }
-      );
+    // Validate password format (6 digits)
+    if (!/^\d{6}$/.test(password)) {
+      return NextResponse.json({ error: 'رمز عبور باید ۶ رقم باشد' }, { status: 400 });
     }
 
-    // مرحله ۲: بررسی وجود والد در جدول parents
-    const { data: parent, error: parentError } = await supabase
-      .from('parents')
-      .select('id, full_name, phone')
-      .eq('phone', phone)
-      .single();
-
-    if (parentError || !parent) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'شماره تلفن والد در سیستم یافت نشد.' 
-        },
-        { status: 404 }
-      );
+    // Check if password matches last 6 digits of national ID
+    const last6Digits = student_national_id.slice(-6);
+    if (password !== last6Digits) {
+      return NextResponse.json({ error: 'رمز عبور اشتباه است' }, { status: 401 });
     }
 
-    // مرحله ۳: بررسی وجود دانش‌آموز با کد ملی
-    const { data: student, error: studentError } = await supabase
+    // Find student and parent
+    const { data: student, error: studentError } = await supabaseAdmin
       .from('students')
-      .select('id, full_name, national_id, parent_id, class_id')
-      .eq('national_id', national_id)
+      .select(`
+        id,
+        full_name,
+        national_id,
+        parent:parents(
+          id,
+          full_name
+        )
+      `)
+      .eq('national_id', student_national_id)
       .single();
 
     if (studentError || !student) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'دانش‌آموزی با این کد ملی یافت نشد.' 
-        },
-        { status: 404 }
-      );
-    }
-
-    // مرحله ۴: بررسی ارتباط والد و دانش‌آموز
-    if (student.parent_id !== parent.id) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'این دانش‌آموز متعلق به این والد نیست.' 
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'دانش‌آموز یافت نشد' }, { status: 404 });
     }
 
     // مرحله ۵: واکشی نمرات دانش‌آموز
@@ -124,7 +85,6 @@ export async function POST(request: NextRequest) {
     const sessionData = {
       parent_id: parent.id,
       parent_name: parent.full_name,
-      parent_phone: parent.phone,
       student_id: student.id,
       student_name: student.full_name,
       student_national_id: student.national_id,
@@ -141,8 +101,7 @@ export async function POST(request: NextRequest) {
       data: {
         parent: {
           id: parent.id,
-          full_name: parent.full_name,
-          phone: parent.phone
+          full_name: parent.full_name
         },
         student: {
           id: student.id,

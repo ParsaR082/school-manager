@@ -24,7 +24,6 @@ export interface SubjectClass {
 export interface Parent {
   id: string;
   full_name: string;
-  phone: string;
   auth_user_id?: string;
   created_at: string;
 }

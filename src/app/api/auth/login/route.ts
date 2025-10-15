@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,71 +12,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'فرمت ایمیل صحیح نمی‌باشد', success: false },
-        { status: 400 }
-      );
-    }
+    // Hardcoded admin credentials
+    const ADMIN_EMAIL = 'Samira1364@school.com';
+    const ADMIN_PASSWORD = 'admin123';
 
-    // Sign in with Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // Check hardcoded admin credentials
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Create mock session data for admin
+      const adminUser = {
+        id: 'admin-001',
+        email: ADMIN_EMAIL,
+        role: 'admin',
+        full_name: 'سمیرا شیخ آقائی'
+      };
 
-    if (authError) {
-      return NextResponse.json(
-        { 
-          error: 'ایمیل یا رمز عبور اشتباه است', 
-          success: false,
-          details: authError.message 
-        },
-        { status: 401 }
-      );
-    }
+      const mockSession = {
+        access_token: 'admin-access-token-' + Date.now(),
+        refresh_token: 'admin-refresh-token-' + Date.now(),
+        expires_at: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) // 7 days
+      };
 
-    if (!authData.user) {
-      return NextResponse.json(
-        { error: 'خطا در احراز هویت', success: false },
-        { status: 401 }
-      );
-    }
+      // Create response with session data
+      const response = NextResponse.json({
+        success: true,
+        message: 'ورود موفقیت‌آمیز',
+        user: adminUser,
+        session: mockSession
+      });
 
-    // Check if user has admin role
-    const userRole = authData.user.user_metadata?.role;
-    if (userRole !== 'admin') {
-      // Sign out the user if they're not admin
-      await supabase.auth.signOut();
-      return NextResponse.json(
-        { error: 'شما دسترسی ادمین ندارید', success: false },
-        { status: 403 }
-      );
-    }
-
-    // Create response with session data
-    const response = NextResponse.json({
-      success: true,
-      message: 'ورود موفقیت‌آمیز',
-      user: {
-        id: authData.user.id,
-        email: authData.user.email,
-        role: userRole,
-        full_name: authData.user.user_metadata?.full_name || 'ادمین',
-      },
-      session: {
-        access_token: authData.session?.access_token,
-        refresh_token: authData.session?.refresh_token,
-        expires_at: authData.session?.expires_at,
-      }
-    });
-
-    // Set secure cookies for session management
-    if (authData.session) {
-      // Set access token cookie
-      response.cookies.set('sb-access-token', authData.session.access_token, {
+      // Set secure cookies for session management
+      response.cookies.set('sb-access-token', mockSession.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -85,8 +49,7 @@ export async function POST(request: NextRequest) {
         path: '/',
       });
 
-      // Set refresh token cookie
-      response.cookies.set('sb-refresh-token', authData.session.refresh_token, {
+      response.cookies.set('sb-refresh-token', mockSession.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -95,21 +58,25 @@ export async function POST(request: NextRequest) {
       });
 
       // Set user info cookie (non-sensitive data)
-      response.cookies.set('user-info', JSON.stringify({
-        id: authData.user.id,
-        email: authData.user.email,
-        role: userRole,
-        full_name: authData.user.user_metadata?.full_name || 'ادمین',
-      }), {
-        httpOnly: false, // Accessible by client-side JS
+      response.cookies.set('user-info', JSON.stringify(adminUser), {
+        httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: '/',
       });
+
+      return response;
     }
 
-    return response;
+    // If not admin credentials, return error
+    return NextResponse.json(
+      { 
+        error: 'ایمیل یا رمز عبور اشتباه است', 
+        success: false
+      },
+      { status: 401 }
+    );
 
   } catch (error) {
     console.error('Login error:', error);

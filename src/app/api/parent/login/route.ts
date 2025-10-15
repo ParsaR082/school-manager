@@ -13,65 +13,51 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_national_id, parent_phone } = body;
+    const { student_national_id, password } = body;
 
     // بررسی ورودی‌ها
-    if (!student_national_id || !parent_phone) {
-      return NextResponse.json({ success: false, error: 'کد ملی دانش‌آموز و شماره تلفن والدین الزامی است' }, { status: 400 });
+    if (!student_national_id || !password) {
+      return NextResponse.json({ success: false, error: 'کد ملی دانش‌آموز و رمز عبور الزامی است' }, { status: 400 });
     }
 
     if (!/^\d{10}$/.test(student_national_id)) {
       return NextResponse.json({ success: false, error: 'کد ملی باید دقیقاً ۱۰ رقم باشد' }, { status: 400 });
     }
 
-    if (!/^09\d{9}$/.test(parent_phone)) {
-      return NextResponse.json({ success: false, error: 'شماره تلفن باید با ۰۹ شروع شود و ۱۱ رقم باشد' }, { status: 400 });
+    if (!/^\d{6}$/.test(password)) {
+      return NextResponse.json({ success: false, error: 'رمز عبور باید دقیقاً ۶ رقم باشد' }, { status: 400 });
     }
 
-    // پیدا کردن والد با شماره تلفن
-    const { data: parents, error: parentError } = await supabase
-      .from('parents')
-      .select('id, full_name, phone')
-      .eq('phone', parent_phone);
-
-    if (parentError) {
-      console.error('Parent database error:', parentError);
-      return NextResponse.json({ success: false, error: 'خطا در اتصال به پایگاه داده' }, { status: 500 });
+    // بررسی اینکه رمز عبور برابر با 6 رقم آخر کد ملی باشد
+    const last6Digits = student_national_id.slice(-6);
+    if (password !== last6Digits) {
+      return NextResponse.json({ success: false, error: 'رمز عبور صحیح نیست' }, { status: 401 });
     }
-
-    if (!parents || parents.length === 0) {
-      return NextResponse.json({ success: false, error: 'والدی با این شماره تلفن یافت نشد' }, { status: 401 });
-    }
-
-    const parent = parents[0];
 
     // پیدا کردن دانش‌آموز با کد ملی
-    const { data: students, error: studentError } = await supabase
+    const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('id, full_name, national_id, class_id, parent_id')
-      .eq('national_id', student_national_id);
+      .select(`
+        id, 
+        full_name, 
+        national_id, 
+        class_id,
+        parent_id,
+        parents!inner(id, full_name)
+      `)
+      .eq('national_id', student_national_id)
+      .single();
 
-    if (studentError) {
-      console.error('Student database error:', studentError);
-      return NextResponse.json({ success: false, error: 'خطا در اتصال به پایگاه داده' }, { status: 500 });
-    }
-
-    if (!students || students.length === 0) {
+    if (studentError || !student) {
       return NextResponse.json({ success: false, error: 'دانش‌آموزی با این کد ملی یافت نشد' }, { status: 401 });
     }
 
-    const student = students[0];
-
-    // بررسی ارتباط والد و دانش‌آموز
-    if (student.parent_id !== parent.id) {
-      return NextResponse.json({ success: false, error: 'این والد و دانش‌آموز به هم مرتبط نیستند' }, { status: 401 });
-    }
+    const parent = student.parents;
 
     // ایجاد JWT
     const sessionData = {
       parent_id: parent.id,
       parent_name: parent.full_name,
-      parent_phone: parent.phone,
       student_id: student.id,
       student_name: student.full_name,
       student_national_id: student.national_id,
@@ -94,7 +80,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'ورود با موفقیت انجام شد',
       data: {
-        parent: { id: parent.id, name: parent.full_name, phone: parent.phone },
+        parent: { id: parent.id, name: parent.full_name },
         student: { id: student.id, name: student.full_name, national_id: student.national_id, class_id: student.class_id },
       },
     });

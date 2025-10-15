@@ -61,11 +61,6 @@ export default function AdminLogin() {
     }
   };
 
-  const fillDemoCredentials = () => {
-    setEmail('admin@example.com');
-    setPassword('admin123');
-  };
-
   // Show loading while checking authentication
   if (checkingAuth) {
     return (
@@ -93,17 +88,6 @@ export default function AdminLogin() {
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">ورود ادمین</h2>
             <p className="text-gray-600">به پنل مدیریت مدرسه خوش آمدید</p>
-          </div>
-
-          {/* Demo Credentials Button */}
-          <div className="mb-6">
-            <button
-              type="button"
-              onClick={fillDemoCredentials}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200 text-sm"
-            >
-              🎯 استفاده از اطلاعات نمونه
-            </button>
           </div>
 
           {/* Error Message */}
@@ -186,15 +170,6 @@ export default function AdminLogin() {
               )}
             </button>
           </form>
-
-          {/* Demo Info */}
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 mb-2">اطلاعات نمونه:</h3>
-            <div className="text-xs text-blue-600 space-y-1">
-              <p><strong>ایمیل:</strong> admin@school.com</p>
-              <p><strong>رمز عبور:</strong> admin123</p>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
