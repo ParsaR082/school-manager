@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hardcoded admin credentials
-    const ADMIN_EMAIL = 'Samira1364@school.com';
+    const ADMIN_EMAIL = 'Samira1364';
     const ADMIN_PASSWORD = 'admin123';
 
     // Check hardcoded admin credentials

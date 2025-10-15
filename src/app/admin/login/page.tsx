@@ -118,18 +118,18 @@ export default function AdminLogin() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                ایمیل
+                نام کاربری
               </label>
               <input
                 id="email"
                 name="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-input text-right"
-                placeholder="admin@example.com"
+                placeholder="admin123"
                 disabled={loading}
               />
             </div>
