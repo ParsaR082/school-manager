@@ -13,8 +13,22 @@ const classSchema = z.object({
 
 type ClassFormData = z.infer<typeof classSchema>;
 
+interface Student {
+  id: string;
+  full_name: string;
+  national_id: string;
+  class_id: string;
+  class?: Class;
+  parent?: {
+    full_name: string;
+  };
+}
+
 export default function ClassesPage() {
   const [classes, setClasses] = useState<Class[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [classStudents, setClassStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
@@ -44,9 +58,37 @@ export default function ClassesPage() {
     }
   };
 
+  // Fetch students
+  const fetchStudents = async () => {
+    try {
+      const response = await fetch('/api/students');
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+      const data = await response.json();
+      setStudents(data || []);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
   useEffect(() => {
     fetchClasses();
+    fetchStudents();
   }, []);
+
+  // Handle class click to show students
+  const handleClassClick = (classItem: Class) => {
+    setSelectedClass(classItem);
+    const filteredStudents = students.filter(student => student.class_id === classItem.id);
+    setClassStudents(filteredStudents);
+  };
+
+  // Handle back to classes list
+  const handleBackToClasses = () => {
+    setSelectedClass(null);
+    setClassStudents([]);
+  };
 
   // Handle form submission
   const onSubmit = async (data: ClassFormData) => {
@@ -133,117 +175,217 @@ export default function ClassesPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 persian-text">
-            مدیریت کلاس‌ها
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 persian-text">
+            {selectedClass ? `دانش‌آموزان کلاس ${selectedClass.name}` : 'مدیریت کلاس‌ها'}
           </h1>
-          <button
-            onClick={handleAddNew}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 persian-text text-sm sm:text-base"
-          >
-            افزودن کلاس جدید
-          </button>
+          {selectedClass ? (
+            <button
+              onClick={handleBackToClasses}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 persian-text text-sm sm:text-base"
+            >
+              بازگشت به لیست کلاس‌ها
+            </button>
+          ) : (
+            <button
+              onClick={handleAddNew}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 persian-text text-sm sm:text-base"
+            >
+              افزودن کلاس جدید
+            </button>
+          )}
         </div>
 
-        {/* Classes Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {/* Mobile view */}
-          <div className="block sm:hidden">
-            {classes.length === 0 ? (
-              <div className="p-6 text-center text-gray-500 persian-text">
-                هیچ کلاسی یافت نشد
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {classes.map((classItem) => (
-                  <div key={classItem.id} className="p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900 persian-text text-sm">
-                          {classItem.name}
-                        </h3>
-                        <p className="text-xs text-gray-500 mt-1">
-                          تاریخ ایجاد: {new Date(classItem.created_at).toLocaleDateString('fa-IR')}
+        {/* Students List (when a class is selected) */}
+        {selectedClass && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Mobile view for students */}
+            <div className="block sm:hidden">
+              {classStudents.length === 0 ? (
+                <div className="p-6 text-center text-gray-500 persian-text">
+                  هیچ دانش‌آموزی در این کلاس یافت نشد
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {classStudents.map((student) => (
+                    <div key={student.id} className="p-4 space-y-2">
+                      <h3 className="font-medium text-gray-900 persian-text text-sm">
+                        {student.full_name}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        کد ملی: {student.national_id}
+                      </p>
+                      {student.parent && (
+                        <p className="text-xs text-gray-500 persian-text">
+                          والد: {student.parent.full_name}
                         </p>
-                      </div>
-                      <div className="flex space-x-2 space-x-reverse">
-                        <button
-                          onClick={() => handleEdit(classItem)}
-                          className="text-blue-600 hover:text-blue-900 persian-text text-xs px-2 py-1 bg-blue-50 rounded"
-                        >
-                          ویرایش
-                        </button>
-                        <button
-                          onClick={() => handleDelete(classItem.id)}
-                          className="text-red-600 hover:text-red-900 persian-text text-xs px-2 py-1 bg-red-50 rounded"
-                        >
-                          حذف
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {/* Desktop view */}
-          <div className="hidden sm:block">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    نام کلاس
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    تاریخ ایجاد
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    عملیات
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {classes.length === 0 ? (
+            {/* Desktop view for students */}
+            <div className="hidden sm:block">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500 persian-text">
-                      هیچ کلاسی یافت نشد
-                    </td>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      نام دانش‌آموز
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      کد ملی
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      نام والد
+                    </th>
                   </tr>
-                ) : (
-                  classes.map((classItem) => (
-                    <tr key={classItem.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
-                        {classItem.name}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {classStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-4 text-center text-gray-500 persian-text">
+                        هیچ دانش‌آموزی در این کلاس یافت نشد
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(classItem.created_at).toLocaleDateString('fa-IR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    </tr>
+                  ) : (
+                    classStudents.map((student) => (
+                      <tr key={student.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
+                          {student.full_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {student.national_id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
+                          {student.parent?.full_name || 'نامشخص'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Classes Table (when no class is selected) */}
+        {!selectedClass && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Mobile view */}
+            <div className="block sm:hidden">
+              {classes.length === 0 ? (
+                <div className="p-6 text-center text-gray-500 persian-text">
+                  هیچ کلاسی یافت نشد
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {classes.map((classItem) => (
+                    <div key={classItem.id} className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div 
+                          onClick={() => handleClassClick(classItem)}
+                          className="cursor-pointer flex-1"
+                        >
+                          <h3 className="font-medium text-gray-900 persian-text text-sm hover:text-blue-600">
+                            {classItem.name}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-1">
+                            تاریخ ایجاد: {new Date(classItem.created_at).toLocaleDateString('fa-IR')}
+                          </p>
+                          <p className="text-xs text-blue-600 mt-1">
+                            {students.filter(s => s.class_id === classItem.id).length} دانش‌آموز
+                          </p>
+                        </div>
                         <div className="flex space-x-2 space-x-reverse">
                           <button
                             onClick={() => handleEdit(classItem)}
-                            className="text-blue-600 hover:text-blue-900 persian-text"
+                            className="text-blue-600 hover:text-blue-900 persian-text text-xs px-2 py-1 bg-blue-50 rounded"
                           >
                             ویرایش
                           </button>
                           <button
                             onClick={() => handleDelete(classItem.id)}
-                            className="text-red-600 hover:text-red-900 persian-text"
+                            className="text-red-600 hover:text-red-900 persian-text text-xs px-2 py-1 bg-red-50 rounded"
                           >
                             حذف
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Desktop view */}
+            <div className="hidden sm:block">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      نام کلاس
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      تعداد دانش‌آموز
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      تاریخ ایجاد
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
+                      عملیات
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {classes.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-4 text-center text-gray-500 persian-text">
+                        هیچ کلاسی یافت نشد
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    classes.map((classItem) => (
+                      <tr key={classItem.id} className="hover:bg-gray-50">
+                        <td 
+                          className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text cursor-pointer hover:text-blue-600"
+                          onClick={() => handleClassClick(classItem)}
+                        >
+                          {classItem.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 persian-text">
+                          {students.filter(s => s.class_id === classItem.id).length} دانش‌آموز
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(classItem.created_at).toLocaleDateString('fa-IR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2 space-x-reverse">
+                            <button
+                              onClick={() => handleEdit(classItem)}
+                              className="text-blue-600 hover:text-blue-900 persian-text"
+                            >
+                              ویرایش
+                            </button>
+                            <button
+                              onClick={() => handleDelete(classItem.id)}
+                              className="text-red-600 hover:text-red-900 persian-text"
+                            >
+                              حذف
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Modal */}
         {isModalOpen && (

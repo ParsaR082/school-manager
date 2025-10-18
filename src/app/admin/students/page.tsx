@@ -48,7 +48,7 @@ export default function StudentsPage() {
       }
       const data = await response.json();
       console.log('Fetched students data:', data); // Debug log
-      setStudents(data);
+      setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -64,18 +64,15 @@ export default function StudentsPage() {
         throw new Error('Failed to fetch classes');
       }
       const data = await response.json();
-      setClasses(data);
+      setClasses(data || []);
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      await Promise.all([fetchStudents(), fetchClasses()]);
-      setLoading(false);
-    };
-    loadData();
+    fetchStudents();
+    fetchClasses();
   }, []);
 
   // Handle form submission
