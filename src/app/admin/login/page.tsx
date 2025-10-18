@@ -20,7 +20,10 @@ export default function AdminLogin() {
           // Verify with server
           const verifyResult = await verifyAuth();
           if (verifyResult.authenticated) {
-            redirectToAdmin();
+            // Use window.location.replace instead of redirectToAdmin to prevent back navigation
+            if (typeof window !== 'undefined') {
+              window.location.replace('/admin');
+            }
             return;
           }
         }
@@ -46,9 +49,12 @@ export default function AdminLogin() {
       if (result.success) {
         setSuccess('ورود موفقیت‌آمیز! در حال انتقال...');
         
-        // Wait a moment to show success message
+        // Wait a moment to show success message then redirect
         setTimeout(() => {
-          redirectToAdmin();
+          // Use window.location.replace to prevent back navigation
+          if (typeof window !== 'undefined') {
+            window.location.replace('/admin');
+          }
         }, 1000);
       } else {
         setError(result.error || 'خطا در ورود به سیستم');

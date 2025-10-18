@@ -30,9 +30,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         const cookieUser = getUserFromCookie();
         if (cookieUser) {
           setUser(cookieUser);
+          setLoading(false);
+          return; // Exit early if we have a valid cookie user
         }
 
-        // Then verify with server
+        // Then verify with server only if no cookie user
         const verifyResult = await verifyAuth();
         
         if (verifyResult.authenticated && verifyResult.user) {
@@ -40,18 +42,21 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         } else {
           console.log('❌ Authentication failed:', verifyResult.error);
           setUser(null);
-          // Don't redirect here - let middleware handle it
+          // Redirect to login if authentication fails
+          router.push('/admin/login');
         }
       } catch (error) {
         console.error('❌ Error checking auth:', error);
         setUser(null);
+        // Redirect to login on error
+        router.push('/admin/login');
       } finally {
         setLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+  }, [router]);
 
   const handleLogout = async () => {
     try {
