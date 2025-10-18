@@ -23,7 +23,7 @@ export async function GET() {
       const user = JSON.parse(userInfo);
       
       // Check if it's our hardcoded admin
-      if (user.email === 'Samira1364@school.com' && user.role === 'admin') {
+      if (user.email === 'Samira1364@school.com' && user.role === 'admin' && user.id === '550e8400-e29b-41d4-a716-446655440000') {
         return NextResponse.json({
           authenticated: true,
           user: user,

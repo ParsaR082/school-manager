@@ -47,6 +47,7 @@ export default function StudentsPage() {
         throw new Error('Failed to fetch students');
       }
       const data = await response.json();
+      console.log('Fetched students data:', data); // Debug log
       setStudents(data);
     } catch (error) {
       console.error('Error fetching students:', error);
