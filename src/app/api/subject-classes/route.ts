@@ -1,41 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { query } from '@/lib/db';
 
 // GET - Fetch subject-class relationships
 export async function GET(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const { searchParams } = new URL(request.url);
     const subjectId = searchParams.get('subject_id');
     const classId = searchParams.get('class_id');
 
-    let query = supabaseAdmin
-      .from('subject_classes')
-      .select(`
-        *,
-        subjects(id, name),
-        classes(id, name)
-      `);
+    let sql = `
+      SELECT 
+        sc.id,
+        sc.subject_id,
+        sc.class_id,
+        sc.created_at,
+        json_build_object('id', s.id, 'name', s.name) AS subjects,
+        json_build_object('id', c.id, 'name', c.name) AS classes
+      FROM subject_classes sc
+      LEFT JOIN subjects s ON sc.subject_id = s.id
+      LEFT JOIN classes c ON sc.class_id = c.id
+    `;
+
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
 
     if (subjectId) {
-      query = query.eq('subject_id', subjectId);
+      params.push(subjectId);
+      conditions.push(`sc.subject_id = $${params.length}`);
     }
-    
+
     if (classId) {
-      query = query.eq('class_id', classId);
+      params.push(classId);
+      conditions.push(`sc.class_id = $${params.length}`);
     }
 
-    const { data, error } = await query.order('created_at');
-
-    if (error) {
-      console.error('Error fetching subject-class relationships:', error);
-      return NextResponse.json({ error: 'Failed to fetch subject-class relationships' }, { status: 500 });
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
     }
 
-    return NextResponse.json(data);
+    sql += ' ORDER BY sc.created_at ASC';
+
+    const result = await query(sql, params);
+    return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error in GET /api/subject-classes:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -45,10 +51,6 @@ export async function GET(request: NextRequest) {
 // POST - Create subject-class relationship
 export async function POST(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const body = await request.json();
     const { subject_id, class_id } = body;
 
@@ -57,22 +59,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'subject_id and class_id are required' }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('subject_classes')
-      .insert([{ subject_id, class_id }])
-      .select(`
-        *,
-        subjects(id, name),
-        classes(id, name)
-      `)
-      .single();
+    const insertResult = await query(
+      `INSERT INTO subject_classes (subject_id, class_id)
+       VALUES ($1, $2)
+       RETURNING id, subject_id, class_id, created_at`,
+      [subject_id, class_id]
+    );
 
-    if (error) {
-      console.error('Error creating subject-class relationship:', error);
-      return NextResponse.json({ error: 'Failed to create subject-class relationship' }, { status: 500 });
-    }
+    const inserted = insertResult.rows[0];
 
-    return NextResponse.json(data, { status: 201 });
+    const fetchResult = await query(
+      `SELECT 
+        sc.id,
+        sc.subject_id,
+        sc.class_id,
+        sc.created_at,
+        json_build_object('id', s.id, 'name', s.name) AS subjects,
+        json_build_object('id', c.id, 'name', c.name) AS classes
+      FROM subject_classes sc
+      LEFT JOIN subjects s ON sc.subject_id = s.id
+      LEFT JOIN classes c ON sc.class_id = c.id
+      WHERE sc.id = $1`,
+      [inserted.id]
+    );
+
+    return NextResponse.json(fetchResult.rows[0], { status: 201 });
   } catch (error) {
     console.error('Error in POST /api/subject-classes:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -82,38 +93,18 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove subject-class relationship
 export async function DELETE(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const { searchParams } = new URL(request.url);
     const subjectId = searchParams.get('subject_id');
     const classId = searchParams.get('class_id');
     const id = searchParams.get('id');
 
     if (id) {
-      // Delete by relationship ID
-      const { error } = await supabaseAdmin
-        .from('subject_classes')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting subject-class relationship:', error);
-        return NextResponse.json({ error: 'Failed to delete subject-class relationship' }, { status: 500 });
-      }
+      await query('DELETE FROM subject_classes WHERE id = $1', [id]);
     } else if (subjectId && classId) {
-      // Delete by subject_id and class_id
-      const { error } = await supabaseAdmin
-        .from('subject_classes')
-        .delete()
-        .eq('subject_id', subjectId)
-        .eq('class_id', classId);
-
-      if (error) {
-        console.error('Error deleting subject-class relationship:', error);
-        return NextResponse.json({ error: 'Failed to delete subject-class relationship' }, { status: 500 });
-      }
+      await query(
+        'DELETE FROM subject_classes WHERE subject_id = $1 AND class_id = $2',
+        [subjectId, classId]
+      );
     } else {
       return NextResponse.json({ error: 'Either id or both subject_id and class_id are required' }, { status: 400 });
     }

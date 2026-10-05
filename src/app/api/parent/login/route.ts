@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { query } from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -34,41 +29,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'رمز عبور صحیح نیست' }, { status: 401 });
     }
 
-    // پیدا کردن دانش‌آموز با کد ملی
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select(`
-        id, 
-        full_name, 
-        national_id, 
-        class_id,
-        parent_id
-      `)
-      .eq('national_id', student_national_id)
-      .single();
+    // پیدا کردن دانش‌آموز و والد به صورت مستقیم
+    const studentRes = await query(
+      `SELECT 
+        s.id, 
+        s.full_name, 
+        s.national_id, 
+        s.class_id,
+        s.parent_id,
+        p.full_name AS parent_name
+       FROM students s
+       LEFT JOIN parents p ON s.parent_id = p.id
+       WHERE s.national_id = $1`,
+      [student_national_id]
+    );
 
-    if (studentError || !student) {
+    if (studentRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'دانش‌آموزی با این کد ملی یافت نشد' }, { status: 401 });
     }
 
-    // پیدا کردن والد
-    const { data: parent, error: parentError } = await supabase
-      .from('parents')
-      .select(`
-        id, 
-        full_name
-      `)
-      .eq('id', student.parent_id)
-      .single();
-
-    if (parentError || !parent) {
-      return NextResponse.json({ success: false, error: 'اطلاعات والدین یافت نشد' }, { status: 404 });
-    }
+    const student = studentRes.rows[0];
 
     // ایجاد JWT
     const sessionData = {
-      parent_id: parent.id,
-      parent_name: parent.full_name,
+      parent_id: student.parent_id,
+      parent_name: student.parent_name || '',
       student_id: student.id,
       student_name: student.full_name,
       student_national_id: student.national_id,
@@ -78,8 +63,8 @@ export async function POST(request: NextRequest) {
     const token = jwt.sign(sessionData, JWT_SECRET, { expiresIn: '24h' });
 
     // ذخیره توکن در کوکی
-    const cookieStore = cookies();
-    (await cookieStore).set('parent_session', token, {
+    const cookieStore = await cookies();
+    cookieStore.set('parent_session', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -91,7 +76,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'ورود با موفقیت انجام شد',
       data: {
-        parent: { id: parent.id, name: parent.full_name },
+        parent: { id: student.parent_id, name: student.parent_name },
         student: { id: student.id, name: student.full_name, national_id: student.national_id, class_id: student.class_id },
       },
     });

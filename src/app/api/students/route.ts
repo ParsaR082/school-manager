@@ -1,27 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { query } from '@/lib/db';
+
+const GET_STUDENTS_SQL = `
+  SELECT 
+    s.id,
+    s.full_name,
+    s.national_id,
+    s.parent_id,
+    s.class_id,
+    s.created_at,
+    CASE 
+      WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name)
+      ELSE NULL 
+    END AS class,
+    CASE 
+      WHEN p.id IS NOT NULL THEN json_build_object('full_name', p.full_name)
+      ELSE NULL 
+    END AS parent
+  FROM students s
+  LEFT JOIN classes c ON s.class_id = c.id
+  LEFT JOIN parents p ON s.parent_id = p.id
+`;
 
 export async function GET() {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-    
-    const { data, error } = await supabaseAdmin
-      .from('students')
-      .select(`
-        *,
-        class:classes(id, name),
-        parent:parents(full_name)
-      `)
-      .order('full_name');
-
-    if (error) {
-      console.error('Error fetching students:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
+    const result = await query(`${GET_STUDENTS_SQL} ORDER BY s.full_name ASC`);
+    return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error in GET /api/students:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -30,10 +34,6 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-    
     const body = await request.json();
     const { full_name, national_id, class_id, parent_full_name } = body;
 
@@ -44,38 +44,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // First, create or find the parent
-    // Create new parent (no need to check for existing since we removed phone)
-    const { data: newParent, error: parentError } = await supabaseAdmin
-      .from('parents')
-      .insert([{ full_name: parent_full_name }])
-      .select('id')
-      .single();
+    // 1. Create parent
+    const parentResult = await query(
+      'INSERT INTO parents (full_name) VALUES ($1) RETURNING id',
+      [parent_full_name]
+    );
+    const parentId = parentResult.rows[0].id;
 
-    if (parentError) {
-      console.error('Error creating parent:', parentError);
-      return NextResponse.json({ error: parentError.message }, { status: 500 });
-    }
+    // 2. Create student
+    const studentResult = await query(
+      'INSERT INTO students (full_name, national_id, parent_id, class_id) VALUES ($1, $2, $3, $4) RETURNING id',
+      [full_name, national_id, parentId, class_id]
+    );
+    const studentId = studentResult.rows[0].id;
 
-    const parent_id = newParent.id;
+    // 3. Return full student with relations
+    const finalResult = await query(
+      `${GET_STUDENTS_SQL} WHERE s.id = $1`,
+      [studentId]
+    );
 
-    // Now create the student
-    const { data, error } = await supabaseAdmin
-      .from('students')
-      .insert([{ full_name, national_id, parent_id, class_id }])
-      .select(`
-        *,
-        class:classes(id, name),
-        parent:parents(full_name)
-      `)
-      .single();
-
-    if (error) {
-      console.error('Error creating student:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
+    return NextResponse.json(finalResult.rows[0]);
   } catch (error) {
     console.error('Error in POST /api/students:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -84,10 +73,6 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-    
     const body = await request.json();
     const { id, full_name, national_id, class_id, parent_full_name } = body;
 
@@ -98,47 +83,37 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Get the current student to find their parent_id
-    const { data: currentStudent, error: fetchError } = await supabaseAdmin
-      .from('students')
-      .select('parent_id')
-      .eq('id', id)
-      .single();
+    // 1. Get current student's parent_id
+    const currentStudentResult = await query(
+      'SELECT parent_id FROM students WHERE id = $1',
+      [id]
+    );
 
-    if (fetchError) {
-      console.error('Error fetching current student:', fetchError);
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    if (currentStudentResult.rows.length === 0) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Update the parent information
-    const { error: parentError } = await supabaseAdmin
-      .from('parents')
-      .update({ full_name: parent_full_name })
-      .eq('id', currentStudent.parent_id);
+    const parentId = currentStudentResult.rows[0].parent_id;
 
-    if (parentError) {
-      console.error('Error updating parent:', parentError);
-      return NextResponse.json({ error: parentError.message }, { status: 500 });
-    }
+    // 2. Update parent
+    await query(
+      'UPDATE parents SET full_name = $1 WHERE id = $2',
+      [parent_full_name, parentId]
+    );
 
-    // Update the student
-    const { data, error } = await supabaseAdmin
-      .from('students')
-      .update({ full_name, national_id, class_id })
-      .eq('id', id)
-      .select(`
-        *,
-        class:classes(id, name),
-        parent:parents(full_name)
-      `)
-      .single();
+    // 3. Update student
+    await query(
+      'UPDATE students SET full_name = $1, national_id = $2, class_id = $3 WHERE id = $4',
+      [full_name, national_id, class_id, id]
+    );
 
-    if (error) {
-      console.error('Error updating student:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    // 4. Return updated student
+    const finalResult = await query(
+      `${GET_STUDENTS_SQL} WHERE s.id = $1`,
+      [id]
+    );
 
-    return NextResponse.json(data);
+    return NextResponse.json(finalResult.rows[0]);
   } catch (error) {
     console.error('Error in PUT /api/students:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -147,10 +122,6 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -158,15 +129,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin
-      .from('students')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting student:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    await query('DELETE FROM students WHERE id = $1', [id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

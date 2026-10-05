@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { query } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the access token from cookies for authentication verification
     const accessToken = request.cookies.get('sb-access-token')?.value;
-    
+
     if (!accessToken) {
-      console.error('❌ No access token found');
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Verify the user is authenticated and has admin role
-    // We'll use supabaseAdmin for the actual database operations to bypass RLS
-    if (!supabaseAdmin) {
-      console.error('❌ Supabase admin client not configured');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
     const { grades } = await request.json();
-    console.log('📝 Received grades data:', JSON.stringify(grades, null, 2));
 
-    if (!grades || !Array.isArray(grades)) {
-      console.error('❌ Invalid grades data - not an array');
+    if (!grades || !Array.isArray(grades) || grades.length === 0) {
       return NextResponse.json(
         { error: 'Grades array is required' },
         { status: 400 }
@@ -37,63 +23,55 @@ export async function POST(request: NextRequest) {
 
     // Validate each grade
     for (const grade of grades) {
-      console.log('🔍 Validating grade:', grade);
-      
       if (!grade.student_id || !grade.subject_id || !grade.month || !grade.school_year || grade.score === undefined) {
-        console.error('❌ Missing required fields in grade:', grade);
         return NextResponse.json(
           { error: 'All grade fields are required' },
           { status: 400 }
         );
       }
 
-      if (grade.score < 0 || grade.score > 20) {
-        console.error('❌ Invalid score range:', grade.score);
-        return NextResponse.json(
-          { error: 'Score must be between 0 and 20' },
-          { status: 400 }
-        );
-      }
-
-      // Validate grade_number if provided
       if (grade.grade_number && (grade.grade_number < 1 || grade.grade_number > 10)) {
-        console.error('❌ Invalid grade_number:', grade.grade_number);
         return NextResponse.json(
           { error: 'grade_number must be between 1 and 10' },
           { status: 400 }
         );
       }
-
-      // Validate UUID format for created_by
-      if (!grade.created_by || typeof grade.created_by !== 'string') {
-        console.error('❌ Invalid created_by field:', grade.created_by);
-        return NextResponse.json(
-          { error: 'created_by field must be a valid UUID string' },
-          { status: 400 }
-        );
-      }
     }
 
-    console.log('✅ All grades validated successfully');
+    // Build multi-row parameterized insert with ON CONFLICT
+    const valuePlaceholders: string[] = [];
+    const values: (string | number)[] = [];
+    let paramIndex = 1;
 
-    // Insert all grades using supabaseAdmin to bypass RLS
-    const { data, error } = await supabaseAdmin
-      .from('grades')
-      .insert(grades)
-      .select();
+    for (const grade of grades) {
+      const studentId = grade.student_id;
+      const subjectId = grade.subject_id;
+      const month = grade.month;
+      const schoolYear = grade.school_year;
+      const gradeNumber = grade.grade_number || 1;
+      const score = String(grade.score);
+      const createdBy = grade.created_by || '00000000-0000-0000-0000-000000000000';
 
-    if (error) {
-      console.error('❌ Supabase error:', error);
-      return NextResponse.json(
-        { error: 'Failed to create grades: ' + error.message },
-        { status: 500 }
+      valuePlaceholders.push(
+        `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6})`
       );
+      values.push(studentId, subjectId, month, schoolYear, gradeNumber, score, createdBy);
+      paramIndex += 7;
     }
 
-    console.log('✅ Grades inserted successfully:', data);
-    return NextResponse.json(data);
+    const insertSql = `
+      INSERT INTO grades (student_id, subject_id, month, school_year, grade_number, score, created_by)
+      VALUES ${valuePlaceholders.join(', ')}
+      ON CONFLICT (student_id, subject_id, month, school_year, grade_number)
+      DO UPDATE SET score = EXCLUDED.score, created_at = NOW()
+      RETURNING *;
+    `;
+
+    const result = await query(insertSql, values);
+
+    return NextResponse.json(result.rows);
   } catch (error) {
-    console.error('❌ Error creating grades:', error);
+    console.error('Error creating grades in bulk:', error);
     return NextResponse.json(
       { error: 'Internal server error: ' + (error as Error).message },
       { status: 500 }

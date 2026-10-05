@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import AdminLayout from '@/components/AdminLayout';
+import Modal from '@/components/ui/Modal';
+import EmptyState from '@/components/ui/EmptyState';
+import PageHeader from '@/components/ui/PageHeader';
+import Badge from '@/components/ui/Badge';
 import type { Grade, Student, Subject, Class, SubjectClass } from '@/lib/types';
 import { PERSIAN_MONTHS } from '@/lib/types';
 import { getUserFromCookie } from '@/lib/auth-client';
@@ -14,11 +18,10 @@ interface GradeWithDetails extends Grade {
 interface MonthlyGrade {
   subject_id: string;
   subject_name: string;
-  grades: { [gradeNumber: number]: { display: string; numeric: number } | null }; // Store both display format and numeric value
+  grades: { [gradeNumber: number]: { display: string; numeric: number } | null };
 }
 
 export default function GradesPage() {
-  // State for data
   const [grades, setGrades] = useState<GradeWithDetails[]>([]);
   const [students, setStudents] = useState<(Student & { class?: Class })[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -26,46 +29,26 @@ export default function GradesPage() {
   const [subjectClasses, setSubjectClasses] = useState<SubjectClass[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // State for new grade registration flow
+  // New grade registration wizard state
   const [isNewGradeMode, setIsNewGradeMode] = useState(false);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [selectedMonth, setSelectedMonth] = useState<number>(7); // New state for month filter
+  const [selectedMonth, setSelectedMonth] = useState<number>(7);
   const [currentStep, setCurrentStep] = useState<'class' | 'student' | 'grades'>('class');
   const [monthlyGrades, setMonthlyGrades] = useState<MonthlyGrade[]>([]);
   const [currentYear] = useState(1403);
   const [saving, setSaving] = useState(false);
 
-  // State for filtering existing grades
+  // Existing grades filters
   const [filterClass, setFilterClass] = useState<string>('');
-
-  // Filtered data
-  const filteredGrades = grades.filter(grade => 
-    !filterClass || grade.student?.class?.id === filterClass
-  );
-
-  const classStudents = students.filter(student => 
-    student.class?.id === selectedClass
-  );
-
-  const selectedStudentData = students.find(s => s.id === selectedStudent);
-  const studentSubjects = useMemo(() => {
-    return selectedStudentData?.class?.id 
-      ? subjects.filter(subject => 
-          subjectClasses.some(sc => 
-            sc.subject_id === subject.id && sc.class_id === selectedStudentData.class?.id
-          )
-        )
-      : [];
-  }, [selectedStudentData, subjects, subjectClasses]);
+  const [filterMonth, setFilterMonth] = useState<string>('');
+  const [searchStudent, setSearchStudent] = useState<string>('');
 
   // Fetch functions
   const fetchGrades = async () => {
     try {
       const response = await fetch('/api/grades');
-      if (!response.ok) {
-        throw new Error('Failed to fetch grades');
-      }
+      if (!response.ok) throw new Error('Failed to fetch grades');
       const data = await response.json();
       setGrades(data || []);
     } catch (error) {
@@ -76,9 +59,7 @@ export default function GradesPage() {
   const fetchStudents = async () => {
     try {
       const response = await fetch('/api/students');
-      if (!response.ok) {
-        throw new Error('Failed to fetch students');
-      }
+      if (!response.ok) throw new Error('Failed to fetch students');
       const data = await response.json();
       setStudents(data || []);
     } catch (error) {
@@ -89,9 +70,7 @@ export default function GradesPage() {
   const fetchSubjects = async () => {
     try {
       const response = await fetch('/api/subjects');
-      if (!response.ok) {
-        throw new Error('Failed to fetch subjects');
-      }
+      if (!response.ok) throw new Error('Failed to fetch subjects');
       const data = await response.json();
       setSubjects(data || []);
     } catch (error) {
@@ -102,9 +81,7 @@ export default function GradesPage() {
   const fetchClasses = async () => {
     try {
       const response = await fetch('/api/classes');
-      if (!response.ok) {
-        throw new Error('Failed to fetch classes');
-      }
+      if (!response.ok) throw new Error('Failed to fetch classes');
       const data = await response.json();
       setClasses(data || []);
     } catch (error) {
@@ -115,9 +92,7 @@ export default function GradesPage() {
   const fetchSubjectClasses = async () => {
     try {
       const response = await fetch('/api/subject-classes');
-      if (!response.ok) {
-        throw new Error('Failed to fetch subject-classes');
-      }
+      if (!response.ok) throw new Error('Failed to fetch subject-classes');
       const data = await response.json();
       setSubjectClasses(data || []);
     } catch (error) {
@@ -127,223 +102,185 @@ export default function GradesPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([fetchGrades(), fetchStudents(), fetchSubjects(), fetchClasses(), fetchSubjectClasses()]);
+      await Promise.all([
+        fetchGrades(),
+        fetchStudents(),
+        fetchSubjects(),
+        fetchClasses(),
+        fetchSubjectClasses(),
+      ]);
       setLoading(false);
     };
     loadData();
   }, []);
 
-  // Load existing grades for selected student
+  const classStudents = useMemo(() => {
+    return students.filter(student => student.class?.id === selectedClass || student.class_id === selectedClass);
+  }, [students, selectedClass]);
+
+  const selectedStudentData = useMemo(() => {
+    return students.find(s => s.id === selectedStudent);
+  }, [students, selectedStudent]);
+
+  const studentSubjects = useMemo(() => {
+    const classId = selectedStudentData?.class?.id || selectedStudentData?.class_id;
+    return classId
+      ? subjects.filter(subject =>
+          subjectClasses.some(sc => sc.subject_id === subject.id && sc.class_id === classId)
+        )
+      : [];
+  }, [selectedStudentData, subjects, subjectClasses]);
+
+  // Load existing grades for selected student in wizard
   useEffect(() => {
     if (selectedStudent && studentSubjects.length > 0 && selectedMonth) {
-      const existingGrades = grades.filter(g => 
-        g.student_id === selectedStudent && 
-        g.school_year === currentYear && 
-        g.month === selectedMonth
+      const existingGrades = grades.filter(g =>
+        g.student_id === selectedStudent &&
+        Number(g.school_year) === currentYear &&
+        Number(g.month) === Number(selectedMonth)
       );
-      
+
       const monthlyGradesData: MonthlyGrade[] = studentSubjects.map(subject => {
         const subjectGrades: { [gradeNumber: number]: { display: string; numeric: number } | null } = {};
-        
-        // Initialize grade numbers 1-10 with null
+
         for (let gradeNum = 1; gradeNum <= 10; gradeNum++) {
           subjectGrades[gradeNum] = null;
         }
-        
-        // Fill existing grades for this month
+
         existingGrades
           .filter(g => g.subject_id === subject.id)
           .forEach(g => {
-            const gradeNumber = (g as Grade & { grade_number?: number }).grade_number || 1; // Default to 1 if not set
-            // For existing grades from database, display the original format
-            // If it's a string (like "3/5"), use it as is
-            // If it's a number, format it properly
-            let displayValue: string;
-            let numericValue: number;
-            
-            const score = g.score as number | string; // Type assertion for flexibility
-            if (typeof score === 'string') {
-              // It's already in string format (like "3/5")
-              displayValue = score;
-              // Calculate numeric value for validation
-              if (score.includes('/')) {
-                const [numerator, denominator] = score.split('/').map(Number);
-                numericValue = denominator !== 0 ? (numerator / denominator) * 20 : 0;
-              } else {
-                numericValue = parseFloat(score) || 0;
-              }
+            const gradeNumber = (g as Grade & { grade_number?: number }).grade_number || 1;
+            const scoreStr = String(g.score);
+            let numericValue = 0;
+
+            if (scoreStr.includes('/')) {
+              const [num, den] = scoreStr.split('/').map(Number);
+              numericValue = den ? (num / den) * 20 : 0;
             } else {
-              // It's a numeric value, format for display
-              displayValue = score % 1 === 0 ? 
-                score.toString() : 
-                score.toFixed(2).replace(/\.?0+$/, '');
-              numericValue = score;
+              numericValue = parseFloat(scoreStr) || 0;
             }
-            
+
             subjectGrades[gradeNumber] = {
-              display: displayValue,
-              numeric: numericValue
+              display: scoreStr,
+              numeric: numericValue,
             };
           });
-        
+
         return {
           subject_id: subject.id,
           subject_name: subject.name,
-          grades: subjectGrades
+          grades: subjectGrades,
         };
       });
-      
+
       setMonthlyGrades(monthlyGradesData);
     } else if (selectedStudent) {
-      // Student selected but no subjects found - this might indicate a data loading issue
       setMonthlyGrades([]);
     }
   }, [selectedStudent, studentSubjects, grades, currentYear, selectedMonth]);
 
-  // Handle new grade registration
-  const startNewGradeRegistration = () => {
-    setIsNewGradeMode(true);
-    setCurrentStep('class');
-    setSelectedClass('');
-    setSelectedStudent('');
-    setMonthlyGrades([]);
-  };
+  const filteredGrades = useMemo(() => {
+    return grades.filter(grade => {
+      const matchesClass = !filterClass || grade.student?.class?.id === filterClass;
+      const matchesMonth = !filterMonth || String(grade.month) === String(filterMonth);
+      const matchesSearch =
+        !searchStudent.trim() ||
+        (grade.student?.full_name && grade.student.full_name.includes(searchStudent.trim())) ||
+        (grade.subject?.name && grade.subject.name.includes(searchStudent.trim()));
 
-  const handleClassSelection = (classId: string) => {
-    setSelectedClass(classId);
-    setCurrentStep('student');
-    setSelectedStudent('');
-  };
-
-  const handleStudentSelection = (studentId: string) => {
-    setSelectedStudent(studentId);
-    setCurrentStep('grades');
-  };
+      return matchesClass && matchesMonth && matchesSearch;
+    });
+  }, [grades, filterClass, filterMonth, searchStudent]);
 
   const handleGradeChange = (subjectId: string, gradeNumber: number, score: string) => {
     let gradeData: { display: string; numeric: number } | null = null;
-    
-    if (score !== '') {
-      let numericScore: number | null = null;
-      
-      // Check if the input contains a fraction (e.g., "3/5", "2/4")
+
+    if (score.trim() !== '') {
+      let numericScore = 0;
       if (score.includes('/')) {
         const parts = score.split('/');
         if (parts.length === 2 && parts[1] !== '') {
-          // Only process if both numerator and denominator are present
-          const numerator = parseFloat(parts[0]);
-          const denominator = parseFloat(parts[1]);
-          
-          // Validate that both parts are numbers and denominator is not zero
-          if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
-            numericScore = numerator / denominator;
-            
-            // Ensure the result is within valid range (0-20)
-            if (numericScore < 0) numericScore = 0;
-            if (numericScore > 20) numericScore = 20;
-            
-            // Keep the original fraction format for display
-            gradeData = { display: score, numeric: numericScore };
-          } else {
-            // If fraction is invalid but user is still typing, keep the display value
-            gradeData = { display: score, numeric: 0 };
+          const num = parseFloat(parts[0]);
+          const den = parseFloat(parts[1]);
+          if (!isNaN(num) && !isNaN(den) && den !== 0) {
+            numericScore = (num / den) * 20;
           }
-        } else {
-          // User is still typing the fraction (e.g., "3/" or "3/5"), keep the display value
-          gradeData = { display: score, numeric: 0 };
         }
       } else {
-        // Handle regular decimal input
         const parsed = parseFloat(score);
-        if (!isNaN(parsed)) {
-          numericScore = parsed;
-          
-          // Ensure the result is within valid range (0-20)
-          if (numericScore < 0) numericScore = 0;
-          if (numericScore > 20) numericScore = 20;
-          
-          // For decimal numbers, store as is
-          gradeData = { display: score, numeric: numericScore };
-        } else {
-          // If input is not a valid number but user is still typing, keep the display value
-          gradeData = { display: score, numeric: 0 };
-        }
+        if (!isNaN(parsed)) numericScore = parsed;
       }
+
+      gradeData = { display: score, numeric: numericScore };
     }
-    
-    setMonthlyGrades(prev => 
-      prev.map(mg => 
-        mg.subject_id === subjectId 
-          ? { ...mg, grades: { ...mg.grades, [gradeNumber]: gradeData } }
-          : mg
-      )
+
+    setMonthlyGrades(prev =>
+      prev.map(mg => {
+        if (mg.subject_id === subjectId) {
+          return {
+            ...mg,
+            grades: {
+              ...mg.grades,
+              [gradeNumber]: gradeData,
+            },
+          };
+        }
+        return mg;
+      })
     );
   };
 
   const saveGrades = async () => {
     setSaving(true);
     try {
-      // Get current user ID
-      const currentUser = getUserFromCookie();
-      if (!currentUser) {
-        throw new Error('کاربر احراز هویت نشده است');
-      }
-
-      // Prepare grades data
+      const currentUser = getUserFromCookie() || { id: '00000000-0000-0000-0000-000000000000' };
       const gradesToSave: Array<{
         student_id: string;
         subject_id: string;
         month: number;
-        grade_number: number;
-        score: number | string;
         school_year: number;
+        score: string;
+        grade_number: number;
         created_by: string;
-        created_at: string;
       }> = [];
-      
+
       monthlyGrades.forEach(mg => {
-        Object.entries(mg.grades).forEach(([gradeNumber, gradeData]) => {
-          if (gradeData !== null && gradeData.numeric >= 0 && gradeData.numeric <= 20) {
+        Object.entries(mg.grades).forEach(([gradeNum, gradeData]) => {
+          if (gradeData !== null && gradeData.display.trim() !== '') {
             gradesToSave.push({
               student_id: selectedStudent,
               subject_id: mg.subject_id,
               month: selectedMonth,
               school_year: currentYear,
-              score: gradeData.display, // Store the original format (3/5 or 15.5)
-              grade_number: parseInt(gradeNumber),
+              score: gradeData.display.trim(),
+              grade_number: parseInt(gradeNum),
               created_by: currentUser.id,
-              created_at: new Date().toISOString()
             });
           }
         });
       });
 
-      // Delete existing grades for this student, month and year
+      // Clear existing grades for this student/month/year
       await fetch('/api/grades', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           student_id: selectedStudent,
           month: selectedMonth,
-          school_year: currentYear
+          school_year: currentYear,
         }),
       });
 
-      // Save new grades
+      // Bulk save
       if (gradesToSave.length > 0) {
         const response = await fetch('/api/grades/bulk', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ grades: gradesToSave }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to save grades');
-        }
+        if (!response.ok) throw new Error('Failed to save grades');
       }
 
       await fetchGrades();
@@ -351,7 +288,6 @@ export default function GradesPage() {
       setCurrentStep('class');
       setSelectedClass('');
       setSelectedStudent('');
-      setSelectedMonth(7);
       setMonthlyGrades([]);
     } catch (error) {
       console.error('Error saving grades:', error);
@@ -361,41 +297,45 @@ export default function GradesPage() {
     }
   };
 
-  const cancelGradeRegistration = () => {
-    setIsNewGradeMode(false);
-    setCurrentStep('class');
-    setSelectedClass('');
-    setSelectedStudent('');
-    setMonthlyGrades([]);
+  const handleDelete = async (id: string) => {
+    if (!confirm('آیا از حذف این نمره اطمینان دارید؟')) return;
+    try {
+      const response = await fetch('/api/grades', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) throw new Error('Failed to delete grade');
+      await fetchGrades();
+    } catch (error) {
+      console.error('Error deleting grade:', error);
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('آیا از حذف این نمره اطمینان دارید؟')) {
-      try {
-        const response = await fetch('/api/grades', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ id }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete grade');
-        }
-
-        await fetchGrades();
-      } catch (error) {
-        console.error('Error deleting grade:', error);
-      }
+  const renderScoreBadge = (scoreStr: string | number) => {
+    const s = String(scoreStr);
+    let numeric = 0;
+    if (s.includes('/')) {
+      const [n, d] = s.split('/').map(Number);
+      numeric = d ? (n / d) * 20 : 0;
+    } else {
+      numeric = parseFloat(s) || 0;
     }
+
+    let variant: 'green' | 'blue' | 'amber' | 'red' = 'blue';
+    if (numeric >= 17) variant = 'green';
+    else if (numeric >= 14) variant = 'blue';
+    else if (numeric >= 10) variant = 'amber';
+    else variant = 'red';
+
+    return <Badge variant={variant}>{s}</Badge>;
   };
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg persian-text">در حال بارگذاری...</div>
+          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </AdminLayout>
     );
@@ -403,315 +343,418 @@ export default function GradesPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-          <h1 className="text-2xl font-bold text-gray-900 persian-text">مدیریت نمرات</h1>
-          <button
-            onClick={startNewGradeRegistration}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium persian-text"
-          >
-            ثبت نمره جدید
-          </button>
+      <div className="space-y-6 fade-in">
+        {/* Page Header */}
+        <PageHeader
+          title="مدیریت و ثبت نمرات"
+          description="ثبت نمرات مستمر ماهانه (۱ تا ۱۰ نمره در ماه) با پشتیبانی از نمرات اعشاری و کسری"
+          badge={
+            <Badge variant="blue">
+              {grades.length} نمره ثبت‌شده
+            </Badge>
+          }
+          action={
+            <button
+              onClick={() => {
+                setIsNewGradeMode(true);
+                setCurrentStep('class');
+                setSelectedClass('');
+                setSelectedStudent('');
+                setMonthlyGrades([]);
+              }}
+              className="btn btn-primary btn-md shadow-xs"
+            >
+              <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              ثبت کارنامه / نمرات جدید
+            </button>
+          }
+        />
+
+        {/* Filters */}
+        <div className="app-card p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-64">
+            <input
+              type="text"
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              placeholder="جستجوی دانش‌آموز یا درس..."
+              className="form-input pr-9 text-xs sm:text-sm"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2.5 w-full md:w-auto">
+            <select
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
+              className="form-input text-xs sm:text-sm w-full sm:w-44"
+            >
+              <option value="">همه کلاس‌ها</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="form-input text-xs sm:text-sm w-full sm:w-36"
+            >
+              <option value="">همه ماه‌ها</option>
+              {Object.entries(PERSIAN_MONTHS).map(([mNum, mName]) => (
+                <option key={mNum} value={mNum}>
+                  {mName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* New Grade Registration Modal */}
-        {isNewGradeMode && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-            <div className="relative w-full max-w-6xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-              <div className="mb-4 sm:mb-6">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900 persian-text mb-2 sm:mb-4">
-                  ثبت نمرات جدید
-                </h3>
-                
-                {/* Progress Steps */}
-                <div className="flex items-center justify-center mb-4 sm:mb-6 px-2">
-                  <div className="flex items-center space-x-2 sm:space-x-4 space-x-reverse overflow-x-auto">
-                    <div className={`flex items-center ${currentStep === 'class' ? 'text-blue-600' : currentStep === 'student' || currentStep === 'grades' ? 'text-green-600' : 'text-gray-400'} flex-shrink-0`}>
-                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${currentStep === 'class' ? 'bg-blue-100' : currentStep === 'student' || currentStep === 'grades' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                        1
-                      </div>
-                      <span className="mr-1 sm:mr-2 text-xs sm:text-sm persian-text whitespace-nowrap">انتخاب کلاس</span>
-                    </div>
-                    <div className={`w-4 sm:w-8 h-0.5 ${currentStep === 'student' || currentStep === 'grades' ? 'bg-green-600' : 'bg-gray-300'} flex-shrink-0`}></div>
-                    <div className={`flex items-center ${currentStep === 'student' ? 'text-blue-600' : currentStep === 'grades' ? 'text-green-600' : 'text-gray-400'} flex-shrink-0`}>
-                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${currentStep === 'student' ? 'bg-blue-100' : currentStep === 'grades' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                        2
-                      </div>
-                      <span className="mr-1 sm:mr-2 text-xs sm:text-sm persian-text whitespace-nowrap">انتخاب دانش‌آموز</span>
-                    </div>
-                    <div className={`w-4 sm:w-8 h-0.5 ${currentStep === 'grades' ? 'bg-green-600' : 'bg-gray-300'} flex-shrink-0`}></div>
-                    <div className={`flex items-center ${currentStep === 'grades' ? 'text-blue-600' : 'text-gray-400'} flex-shrink-0`}>
-                      <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${currentStep === 'grades' ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                        3
-                      </div>
-                      <span className="mr-1 sm:mr-2 text-xs sm:text-sm persian-text whitespace-nowrap">ثبت نمرات</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 1: Class Selection */}
-                {currentStep === 'class' && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm sm:text-md font-medium text-gray-900 persian-text">انتخاب کلاس</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                      {classes.map((cls) => (
+        {/* Existing Grades Table */}
+        <div className="table-wrapper">
+          {filteredGrades.length === 0 ? (
+            <EmptyState
+              title={grades.length === 0 ? 'هنوز نمره‌ای ثبت نشده است' : 'نمره‌ای یافت نشد'}
+              description={
+                grades.length === 0
+                  ? 'جهت ثبت اولین نمرات دانش‌آموزان روی دکمه "ثبت کارنامه / نمرات جدید" کلیک کنید.'
+                  : 'هیچ نمره‌ای با فیلترهای انتخابی مطابقت ندارد.'
+              }
+              actionText={grades.length === 0 ? 'ثبت نمره' : undefined}
+              onAction={
+                grades.length === 0
+                  ? () => {
+                      setIsNewGradeMode(true);
+                      setCurrentStep('class');
+                    }
+                  : undefined
+              }
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
+                  <tr>
+                    <th className="table-header-cell">دانش‌آموز</th>
+                    <th className="table-header-cell">کلاس</th>
+                    <th className="table-header-cell">درس</th>
+                    <th className="table-header-cell">ماه</th>
+                    <th className="table-header-cell">نوبت نمره</th>
+                    <th className="table-header-cell">نمره ثبت‌شده</th>
+                    <th className="table-header-cell text-left">عملیات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {filteredGrades.map((grade) => (
+                    <tr key={grade.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="table-body-cell font-semibold text-slate-900 persian-text">
+                        {grade.student?.full_name}
+                      </td>
+                      <td className="table-body-cell">
+                        {grade.student?.class?.name ? (
+                          <Badge variant="slate">{grade.student.class.name}</Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="table-body-cell text-slate-700 persian-text">
+                        {grade.subject?.name}
+                      </td>
+                      <td className="table-body-cell text-slate-600 persian-text font-medium">
+                        {PERSIAN_MONTHS[grade.month as keyof typeof PERSIAN_MONTHS]}
+                      </td>
+                      <td className="table-body-cell text-slate-500 font-mono text-xs">
+                        نمره {grade.grade_number || 1}
+                      </td>
+                      <td className="table-body-cell">
+                        {renderScoreBadge(grade.score)}
+                      </td>
+                      <td className="table-body-cell text-left">
                         <button
-                          key={cls.id}
-                          onClick={() => handleClassSelection(cls.id)}
-                          className="p-3 sm:p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center persian-text"
+                          onClick={() => handleDelete(grade.id)}
+                          className="btn btn-ghost btn-sm text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                          title="حذف نمره"
                         >
-                          <div className="font-medium text-gray-900 text-sm sm:text-base">{cls.name}</div>
-                          <div className="text-xs sm:text-sm text-gray-500 mt-1">
-                            {students.filter(s => s.class?.id === cls.id).length} دانش‌آموز
-                          </div>
+                          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          حذف
                         </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 2: Student Selection */}
-                {currentStep === 'student' && (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                      <h4 className="text-sm sm:text-md font-medium text-gray-900 persian-text">
-                        انتخاب دانش‌آموز از کلاس {classes.find(c => c.id === selectedClass)?.name}
-                      </h4>
-                      <button
-                        onClick={() => setCurrentStep('class')}
-                        className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm persian-text self-start sm:self-auto"
-                      >
-                        تغییر کلاس
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-80 sm:max-h-96 overflow-y-auto">
-                      {classStudents.map((student) => (
-                        <button
-                          key={student.id}
-                          onClick={() => handleStudentSelection(student.id)}
-                          className="p-3 sm:p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-right persian-text"
-                        >
-                          <div className="font-medium text-gray-900 text-sm sm:text-base">{student.full_name}</div>
-                          <div className="text-xs sm:text-sm text-gray-500 mt-1">{student.national_id}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Grades Table */}
-                {currentStep === 'grades' && (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                      <h4 className="text-sm sm:text-md font-medium text-gray-900 persian-text">
-                        ثبت نمرات برای {selectedStudentData?.full_name}
-                      </h4>
-                      <button
-                        onClick={() => setCurrentStep('student')}
-                        className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm persian-text self-start sm:self-auto"
-                      >
-                        تغییر دانش‌آموز
-                      </button>
-                    </div>
-                    
-                    {/* Month Filter */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 persian-text mb-2">
-                        انتخاب ماه:
-                      </label>
-                      <select
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 persian-text text-gray-900"
-                      >
-                        {[7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6].map(month => (
-                          <option key={month} value={month} className="text-gray-900">
-                            {PERSIAN_MONTHS[month as keyof typeof PERSIAN_MONTHS]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="overflow-x-auto -mx-2 sm:mx-0">
-                      <div className="inline-block min-w-full align-middle">
-                        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="sticky right-0 bg-gray-50 px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text border-l border-gray-200">
-                                  درس
-                                </th>
-                                {/* Grade columns 1-10 */}
-                                {Array.from({ length: 10 }, (_, i) => i + 1).map(gradeNum => (
-                                  <th key={gradeNum} className="px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider persian-text min-w-[60px]">
-                                    <div className="truncate">
-                                      نمره {gradeNum}
-                                    </div>
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {monthlyGrades.map((mg) => (
-                                <tr key={mg.subject_id}>
-                                  <td className="sticky right-0 bg-white px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 persian-text border-l border-gray-200 max-w-[100px] sm:max-w-none">
-                                    <div className="truncate" title={mg.subject_name}>
-                                      {mg.subject_name}
-                                    </div>
-                                  </td>
-                                  {Array.from({ length: 10 }, (_, i) => i + 1).map(gradeNum => (
-                                    <td key={gradeNum} className="px-2 sm:px-3 py-4 whitespace-nowrap text-center">
-                                      <input
-                                        key={`${mg.subject_id}-${gradeNum}`}
-                                        type="text"
-                                        value={mg.grades[gradeNum] !== null ? 
-                                          mg.grades[gradeNum]!.display : ''
-                                        }
-                                        onChange={(e) => handleGradeChange(mg.subject_id, gradeNum, e.target.value)}
-                                        className="w-12 sm:w-16 px-1 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded text-center text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="-"
-                                        title="می‌توانید نمره اعشاری (مثل 15.5) یا کسری (مثل 3/5) وارد کنید"
-                                      />
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Mobile scroll hint */}
-                    <div className="text-xs text-gray-500 persian-text text-center sm:hidden">
-                      برای مشاهده نمرات بیشتر، جدول را به چپ بکشید
-                    </div>
-                  </div>
-                )}
-
-                {/* Modal Actions */}
-                <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse pt-6 border-t">
-                  <button
-                    onClick={cancelGradeRegistration}
-                    className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 persian-text"
-                  >
-                    انصراف
-                  </button>
-                  {currentStep === 'grades' && (
-                    <button
-                      onClick={saveGrades}
-                      disabled={saving}
-                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 persian-text"
-                    >
-                      {saving ? 'در حال ذخیره...' : 'ذخیره نمرات'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Existing Grades List */}
-        {!isNewGradeMode && (
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-6">
-                <h3 className="text-lg font-medium text-gray-900 persian-text">نمرات ثبت شده</h3>
-                <div className="w-full sm:w-auto">
-                  <select
-                    value={filterClass}
-                    onChange={(e) => setFilterClass(e.target.value)}
-                    className="form-input text-sm w-full sm:w-48"
-                  >
-                    <option value="">همه کلاس‌ها</option>
-                    {classes.map((cls) => (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        دانش‌آموز
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        کلاس
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        درس
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        ماه
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        سال تحصیلی
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        نمره
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                        عملیات
-                      </th>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredGrades.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-4 text-center text-gray-500 persian-text">
-                          هیچ نمره‌ای یافت نشد
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredGrades.map((grade) => (
-                        <tr key={grade.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
-                            {grade.student?.full_name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
-                            {grade.student?.class?.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
-                            {grade.subject?.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 persian-text">
-                            {PERSIAN_MONTHS[grade.month as keyof typeof PERSIAN_MONTHS]}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {grade.school_year}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              grade.score >= 12 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {grade.score}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => handleDelete(grade.id)}
-                              className="text-red-600 hover:text-red-900 persian-text"
-                            >
-                              حذف
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Wizard Modal */}
+        <Modal
+          isOpen={isNewGradeMode}
+          onClose={() => setIsNewGradeMode(false)}
+          title="فرآیند ثبت نمرات ماهانه"
+          description="کلاس، دانش‌آموز و ماه مورد نظر را انتخاب و نمرات را وارد کنید"
+          maxWidth="6xl"
+        >
+          <div className="space-y-6">
+            {/* Step Wizard Indicator */}
+            <div className="flex items-center justify-center gap-2 sm:gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200/60 overflow-x-auto">
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold persian-text transition-colors ${
+                  currentStep === 'class'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full flex items-center justify-center bg-white/20 text-xs">
+                  ۱
+                </span>
+                <span>انتخاب کلاس</span>
+              </div>
+              <span className="text-slate-300">&larr;</span>
+
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold persian-text transition-colors ${
+                  currentStep === 'student'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full flex items-center justify-center bg-white/20 text-xs">
+                  ۲
+                </span>
+                <span>انتخاب دانش‌آموز</span>
+              </div>
+              <span className="text-slate-300">&larr;</span>
+
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold persian-text transition-colors ${
+                  currentStep === 'grades'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full flex items-center justify-center bg-white/20 text-xs">
+                  ۳
+                </span>
+                <span>جدول ثبت نمرات</span>
+              </div>
+            </div>
+
+            {/* Step 1: Class Selection */}
+            {currentStep === 'class' && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-slate-800 persian-text">
+                  کلاس مورد نظر را انتخاب نمایید:
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {classes.map((cls) => {
+                    const count = students.filter(s => s.class_id === cls.id).length;
+                    return (
+                      <button
+                        key={cls.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedClass(cls.id);
+                          setCurrentStep('student');
+                        }}
+                        className="p-4 rounded-xl border border-slate-200/80 bg-white hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-xs transition-all text-right group persian-text"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-900 group-hover:text-blue-600">
+                            {cls.name}
+                          </span>
+                          <span className="text-xs text-slate-400 group-hover:text-blue-600">&larr;</span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">{count} دانش‌آموز</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Student Selection */}
+            {currentStep === 'student' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-800 persian-text">
+                    دانش‌آموز مورد نظر از {classes.find(c => c.id === selectedClass)?.name}:
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep('class')}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium persian-text"
+                  >
+                    تغییر کلاس
+                  </button>
+                </div>
+
+                {classStudents.length === 0 ? (
+                  <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    در این کلاس دانش‌آموزی ثبت نشده است.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-1">
+                    {classStudents.map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStudent(st.id);
+                          setCurrentStep('grades');
+                        }}
+                        className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-xs transition-all text-right group persian-text flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-sm text-slate-900 group-hover:text-blue-600">
+                            {st.full_name}
+                          </p>
+                          <p className="text-xs text-slate-400 font-mono mt-0.5">{st.national_id}</p>
+                        </div>
+                        <span className="text-xs text-slate-400 group-hover:text-blue-600">&larr;</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Grade Matrix */}
+            {currentStep === 'grades' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                      {selectedStudentData?.full_name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 persian-text">
+                        ثبت نمرات: {selectedStudentData?.full_name}
+                      </p>
+                      <p className="text-xs text-slate-500 font-mono">
+                        کد ملی: {selectedStudentData?.national_id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-700 persian-text whitespace-nowrap">
+                      انتخاب ماه:
+                    </label>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                      className="form-input text-xs sm:text-sm py-1.5 px-3 w-32"
+                    >
+                      {Object.entries(PERSIAN_MONTHS).map(([mNum, mName]) => (
+                        <option key={mNum} value={mNum}>
+                          {mName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {monthlyGrades.length === 0 ? (
+                  <p className="text-xs text-amber-600 bg-amber-50 p-4 rounded-xl border border-amber-200 persian-text text-center">
+                    برای این کلاس درسی تعریف نشده است. لطفاً ابتدا در بخش دروس، دروس را به این کلاس اختصاص دهید.
+                  </p>
+                ) : (
+                  <div className="table-wrapper">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead>
+                          <tr>
+                            <th className="table-header-cell sticky right-0 bg-slate-50 z-10 border-l border-slate-200 min-w-[130px]">
+                              درس
+                            </th>
+                            {Array.from({ length: 10 }, (_, i) => i + 1).map(gNum => (
+                              <th key={gNum} className="table-header-cell text-center min-w-[64px] px-1">
+                                نمره {gNum}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {monthlyGrades.map((mg) => (
+                            <tr key={mg.subject_id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="table-body-cell sticky right-0 bg-white z-10 border-l border-slate-200 font-semibold text-slate-800 text-xs sm:text-sm">
+                                {mg.subject_name}
+                              </td>
+                              {Array.from({ length: 10 }, (_, i) => i + 1).map(gNum => (
+                                <td key={gNum} className="table-body-cell text-center p-1.5">
+                                  <input
+                                    type="text"
+                                    value={mg.grades[gNum] ? mg.grades[gNum]!.display : ''}
+                                    onChange={(e) => handleGradeChange(mg.subject_id, gNum, e.target.value)}
+                                    placeholder="-"
+                                    className="w-14 h-8 text-center text-xs font-mono font-medium rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-colors"
+                                    title="نمره اعشاری یا کسری مثل 3/5 یا 18"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-slate-400 persian-text text-center sm:hidden">
+                  &larr; برای مشاهده نمرات ۱ تا ۱۰، جدول را به چپ اسکرول کنید
+                </p>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              {currentStep !== 'class' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep === 'grades') setCurrentStep('student');
+                    else if (currentStep === 'student') setCurrentStep('class');
+                  }}
+                  className="btn btn-secondary btn-md text-xs sm:text-sm"
+                >
+                  &rarr; مرحله قبل
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsNewGradeMode(false)}
+                  className="btn btn-secondary btn-md text-xs sm:text-sm"
+                >
+                  انصراف
+                </button>
+                {currentStep === 'grades' && (
+                  <button
+                    type="button"
+                    onClick={saveGrades}
+                    disabled={saving}
+                    className="btn btn-primary btn-md shadow-xs text-xs sm:text-sm"
+                  >
+                    {saving ? 'در حال ذخیره‌سازی...' : 'ذخیره نمرات در پایگاه داده'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </Modal>
       </div>
     </AdminLayout>
   );

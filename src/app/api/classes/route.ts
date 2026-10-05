@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-    
-    const { data, error } = await supabaseAdmin
-      .from('classes')
-      .select('*')
-      .order('name');
-
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    const result = await query('SELECT * FROM classes ORDER BY name ASC');
+    return NextResponse.json(result.rows);
   } catch (error) {
     console.error('Error fetching classes:', error);
     return NextResponse.json(
@@ -26,10 +16,6 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const { name } = await request.json();
 
     if (!name) {
@@ -39,15 +25,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('classes')
-      .insert([{ name }])
-      .select()
-      .single();
+    const result = await query(
+      'INSERT INTO classes (name) VALUES ($1) RETURNING *',
+      [name]
+    );
 
-    if (error) throw error;
-
-    return NextResponse.json(data);
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
     console.error('Error creating class:', error);
     return NextResponse.json(
@@ -59,10 +42,6 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const { id, name } = await request.json();
 
     if (!id || !name) {
@@ -72,16 +51,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('classes')
-      .update({ name })
-      .eq('id', id)
-      .select()
-      .single();
+    const result = await query(
+      'UPDATE classes SET name = $1 WHERE id = $2 RETURNING *',
+      [name, id]
+    );
 
-    if (error) throw error;
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Class not found' }, { status: 404 });
+    }
 
-    return NextResponse.json(data);
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating class:', error);
     return NextResponse.json(
@@ -93,10 +72,6 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -107,12 +82,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error } = await supabaseAdmin
-      .from('classes')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await query('DELETE FROM classes WHERE id = $1', [id]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

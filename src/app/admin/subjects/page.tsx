@@ -5,6 +5,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import AdminLayout from '@/components/AdminLayout';
+import Modal from '@/components/ui/Modal';
+import EmptyState from '@/components/ui/EmptyState';
+import PageHeader from '@/components/ui/PageHeader';
+import Badge from '@/components/ui/Badge';
 import type { Subject, Class, SubjectClass } from '@/lib/types';
 
 const subjectSchema = z.object({
@@ -26,6 +30,8 @@ export default function SubjectsPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SubjectFormData>({
     resolver: zodResolver(subjectSchema),
@@ -35,13 +41,12 @@ export default function SubjectsPage() {
     },
   });
 
-  // Fetch subjects, classes, and subject-class relationships
+  const selectedClassIds = watch('class_ids') || [];
+
   const fetchSubjects = async () => {
     try {
       const response = await fetch('/api/subjects');
-      if (!response.ok) {
-        throw new Error('Failed to fetch subjects');
-      }
+      if (!response.ok) throw new Error('Failed to fetch subjects');
       const data = await response.json();
       setSubjects(data || []);
     } catch (error) {
@@ -54,9 +59,7 @@ export default function SubjectsPage() {
   const fetchClasses = async () => {
     try {
       const response = await fetch('/api/classes');
-      if (!response.ok) {
-        throw new Error('Failed to fetch classes');
-      }
+      if (!response.ok) throw new Error('Failed to fetch classes');
       const data = await response.json();
       setClasses(data || []);
     } catch (error) {
@@ -67,9 +70,7 @@ export default function SubjectsPage() {
   const fetchSubjectClasses = async () => {
     try {
       const response = await fetch('/api/subject-classes');
-      if (!response.ok) {
-        throw new Error('Failed to fetch subject-classes');
-      }
+      if (!response.ok) throw new Error('Failed to fetch subject-classes');
       const data = await response.json();
       setSubjectClasses(data || []);
     } catch (error) {
@@ -83,59 +84,40 @@ export default function SubjectsPage() {
     fetchSubjectClasses();
   }, []);
 
-  // Handle form submission
   const onSubmit = async (data: SubjectFormData) => {
     try {
       let subjectId: string;
 
       if (editingSubject) {
-        // Update existing subject
         const response = await fetch('/api/subjects', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: editingSubject.id, name: data.name }),
         });
-
-        if (!response.ok) {
-          throw new Error('Failed to update subject');
-        }
-
+        if (!response.ok) throw new Error('Failed to update subject');
         subjectId = editingSubject.id;
 
-        // Remove existing subject-class relationships
+        // Remove existing relationships
         const existingRelations = subjectClasses.filter(sc => sc.subject_id === subjectId);
         for (const relation of existingRelations) {
-          await fetch(`/api/subject-classes?id=${relation.id}`, {
-            method: 'DELETE',
-          });
+          await fetch(`/api/subject-classes?id=${relation.id}`, { method: 'DELETE' });
         }
       } else {
-        // Create new subject
         const response = await fetch('/api/subjects', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: data.name }),
         });
-
-        if (!response.ok) {
-          throw new Error('Failed to create subject');
-        }
-
+        if (!response.ok) throw new Error('Failed to create subject');
         const newSubject = await response.json();
         subjectId = newSubject.id;
       }
 
-      // Create new subject-class relationships
+      // Create new relationships
       for (const classId of data.class_ids) {
         await fetch('/api/subject-classes', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subject_id: subjectId, class_id: classId }),
         });
       }
@@ -150,7 +132,6 @@ export default function SubjectsPage() {
     }
   };
 
-  // Handle delete
   const handleDelete = async (subjectId: string) => {
     if (!confirm('آیا از حذف این درس اطمینان دارید؟')) return;
 
@@ -158,280 +139,258 @@ export default function SubjectsPage() {
       const response = await fetch(`/api/subjects?id=${subjectId}`, {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete subject');
-      }
-
+      if (!response.ok) throw new Error('Failed to delete subject');
       await fetchSubjects();
+      await fetchSubjectClasses();
     } catch (error) {
       console.error('Error deleting subject:', error);
     }
   };
 
-  // Handle edit
   const handleEdit = (subject: Subject) => {
     setEditingSubject(subject);
-    
-    // Get class IDs for this subject
     const subjectClassIds = subjectClasses
       .filter(sc => sc.subject_id === subject.id)
       .map(sc => sc.class_id);
-    
-    reset({ 
+
+    reset({
       name: subject.name,
-      class_ids: subjectClassIds
+      class_ids: subjectClassIds,
     });
     setIsModalOpen(true);
   };
 
-  // Handle add new
   const handleAddNew = () => {
     setEditingSubject(null);
-    reset({ 
+    reset({
       name: '',
-      class_ids: []
+      class_ids: [],
     });
     setIsModalOpen(true);
+  };
+
+  const toggleClassSelection = (classId: string) => {
+    const current = selectedClassIds;
+    if (current.includes(classId)) {
+      setValue('class_ids', current.filter(id => id !== classId));
+    } else {
+      setValue('class_ids', [...current, classId]);
+    }
   };
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </AdminLayout>
     );
   }
+
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 persian-text">
-            مدیریت دروس
-          </h1>
-          <button
-            onClick={handleAddNew}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 persian-text text-sm sm:text-base"
-          >
-            افزودن درس جدید
-          </button>
-        </div>
+      <div className="space-y-6 fade-in">
+        {/* Page Header */}
+        <PageHeader
+          title="مدیریت دروس"
+          description="تعریف سرفصل‌های درسی و تخصیص آن‌ها به کلاس‌ها و پایه‌های مختلف"
+          action={
+            <button
+              onClick={handleAddNew}
+              className="btn btn-primary btn-md shadow-xs"
+            >
+              <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              افزودن درس جدید
+            </button>
+          }
+        />
 
         {/* Subjects Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {/* Mobile view */}
-          <div className="block sm:hidden">
-            {subjects.length === 0 ? (
-              <div className="p-6 text-center text-gray-500 persian-text">
-                هیچ درسی یافت نشد
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {subjects.map((subject) => {
-                  const assignedClasses = subjectClasses
-                    .filter(sc => sc.subject_id === subject.id)
-                    .map(sc => classes.find(c => c.id === sc.class_id)?.name)
-                    .filter(Boolean);
-
-                  return (
-                    <div key={subject.id} className="p-4 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 persian-text text-sm">
-                            {subject.name}
-                          </h3>
-                          <p className="text-xs text-gray-500 mt-1">
-                            کلاس‌ها: {assignedClasses.length > 0 ? assignedClasses.join('، ') : 'تخصیص نیافته'}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            تاریخ ایجاد: {new Date(subject.created_at).toLocaleDateString('fa-IR')}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2 space-x-reverse">
-                          <button
-                            onClick={() => handleEdit(subject)}
-                            className="text-blue-600 hover:text-blue-900 persian-text text-xs px-2 py-1 bg-blue-50 rounded"
-                          >
-                            ویرایش
-                          </button>
-                          <button
-                            onClick={() => handleDelete(subject.id)}
-                            className="text-red-600 hover:text-red-900 persian-text text-xs px-2 py-1 bg-red-50 rounded"
-                          >
-                            حذف
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Desktop view */}
-          <div className="hidden sm:block">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    نام درس
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    کلاس‌های تخصیص یافته
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    تاریخ ایجاد
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider persian-text">
-                    عملیات
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {subjects.length === 0 ? (
+        <div className="table-wrapper">
+          {subjects.length === 0 ? (
+            <EmptyState
+              title="هنوز درسی تعریف نشده است"
+              description="برای شروع نمره‌دهی، ابتدا دروس آموزشی و کلاس‌های مرتبط با آن‌ها را تعریف کنید."
+              actionText="افزودن اولین درس"
+              onAction={handleAddNew}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500 persian-text">
-                      هیچ درسی یافت نشد
-                    </td>
+                    <th className="table-header-cell">نام درس</th>
+                    <th className="table-header-cell">کلاس‌های ارائه‌شده</th>
+                    <th className="table-header-cell">تاریخ ایجاد</th>
+                    <th className="table-header-cell text-left">عملیات</th>
                   </tr>
-                ) : (
-                subjects.map((subject) => {
-                  const assignedClasses = subjectClasses
-                    .filter(sc => sc.subject_id === subject.id)
-                    .map(sc => classes.find(c => c.id === sc.class_id)?.name)
-                    .filter(Boolean);
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {subjects.map((subject) => {
+                    const assignedClasses = subjectClasses
+                      .filter(sc => sc.subject_id === subject.id)
+                      .map(sc => classes.find(c => c.id === sc.class_id)?.name)
+                      .filter(Boolean) as string[];
 
-                  return (
-                    <tr key={subject.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 persian-text">
-                        {subject.name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 persian-text">
-                        {assignedClasses.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {assignedClasses.map((className, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                              >
-                                {className}
-                              </span>
-                            ))}
+                    return (
+                      <tr key={subject.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="table-body-cell font-medium text-slate-900 persian-text">
+                          {subject.name}
+                        </td>
+                        <td className="table-body-cell">
+                          <div className="flex flex-wrap gap-1.5">
+                            {assignedClasses.length > 0 ? (
+                              assignedClasses.map((className, idx) => (
+                                <Badge key={idx} variant="blue">
+                                  {className}
+                                </Badge>
+                              ))
+                            ) : (
+                              <Badge variant="amber">بدون کلاس</Badge>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-gray-400">هیچ کلاسی تخصیص نیافته</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(subject.created_at).toLocaleDateString('fa-IR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2 space-x-reverse">
-                          <button
-                            onClick={() => handleEdit(subject)}
-                          className="text-blue-600 hover:text-blue-900 persian-text"
-                        >
-                          ویرایش
-                        </button>
-                        <button
-                          onClick={() => handleDelete(subject.id)}
-                          className="text-red-600 hover:text-red-900 persian-text"
-                        >
-                          حذف
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="table-body-cell text-xs text-slate-500 font-mono">
+                          {new Date(subject.created_at).toLocaleDateString('fa-IR')}
+                        </td>
+                        <td className="table-body-cell text-left">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEdit(subject)}
+                              className="btn btn-ghost btn-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50"
+                              title="ویرایش درس"
+                            >
+                              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              ویرایش
+                            </button>
+                            <button
+                              onClick={() => handleDelete(subject.id)}
+                              className="btn btn-ghost btn-sm text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                              title="حذف درس"
+                            >
+                              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              حذف
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      </div>
 
         {/* Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white m-4">
-              <div className="mt-3">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900 persian-text mb-4">
-                  {editingSubject ? 'ویرایش درس' : 'افزودن درس جدید'}
-                </h3>
-                
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 persian-text mb-1">
-                      نام درس
-                    </label>
-                    <input
-                      type="text"
-                      {...register('name')}
-                      className="form-input"
-                      placeholder="مثال: ریاضی"
-                    />
-                    {errors.name && (
-                      <p className="mt-1 text-sm text-red-600 persian-text">
-                        {errors.name.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 persian-text mb-2">
-                      انتخاب کلاس‌ها
-                    </label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                      {classes.map((classItem) => (
-                        <label key={classItem.id} className="flex items-center space-x-2 space-x-reverse">
-                          <input
-                            type="checkbox"
-                            value={classItem.id}
-                            {...register('class_ids')}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700 persian-text">
-                            {classItem.name}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {errors.class_ids && (
-                      <p className="mt-1 text-sm text-red-600 persian-text">
-                        {errors.class_ids.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 sm:space-x-reverse pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsModalOpen(false);
-                        setEditingSubject(null);
-                        reset();
-                      }}
-                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 persian-text"
-                    >
-                      انصراف
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 persian-text"
-                    >
-                      {isSubmitting ? 'در حال ذخیره...' : editingSubject ? 'ویرایش' : 'افزودن'}
-                    </button>
-                  </div>
-                </form>
-              </div>
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingSubject(null);
+            reset();
+          }}
+          title={editingSubject ? 'ویرایش درس' : 'افزودن درس جدید'}
+          description="نام درس و کلاس‌هایی که این درس در آن تدریس می‌شود را انتخاب کنید"
+          maxWidth="lg"
+        >
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div>
+              <label className="form-label">
+                نام درس <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                {...register('name')}
+                className="form-input"
+                placeholder="مثال: فیزیک ۱"
+                autoFocus
+              />
+              {errors.name && (
+                <p className="form-error persian-text">{errors.name.message}</p>
+              )}
             </div>
-          </div>
-        )}
+
+            <div>
+              <label className="form-label">
+                کلاس‌های مرتبط با این درس <span className="text-rose-500">*</span>
+              </label>
+              <p className="text-xs text-slate-500 mb-2.5 persian-text">
+                حداقل یک کلاس را انتخاب کنید:
+              </p>
+              
+              {classes.length === 0 ? (
+                <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                  ابتدا از بخش کلاس‌ها، کلاس تعریف کنید.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1">
+                  {classes.map((cls) => {
+                    const isSelected = selectedClassIds.includes(cls.id);
+                    return (
+                      <div
+                        key={cls.id}
+                        onClick={() => toggleClassSelection(cls.id)}
+                        className={`p-3 rounded-xl border text-sm font-medium cursor-pointer transition-all flex items-center justify-between persian-text ${
+                          isSelected
+                            ? 'bg-blue-50/80 border-blue-400 text-blue-900 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{cls.name}</span>
+                        <div
+                          className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {errors.class_ids && (
+                <p className="form-error persian-text">{errors.class_ids.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingSubject(null);
+                  reset();
+                }}
+                className="btn btn-secondary btn-md"
+              >
+                انصراف
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn btn-primary btn-md shadow-xs"
+              >
+                {isSubmitting ? 'در حال ذخیره...' : editingSubject ? 'ذخیره تغییرات' : 'افزودن درس'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </AdminLayout>
   );

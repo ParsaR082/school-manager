@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import AdminLayout from '@/components/AdminLayout';
 
 interface DashboardStats {
@@ -35,154 +36,219 @@ export default function AdminDashboard() {
 
     fetchStats();
   }, []);
+
   return (
     <AdminLayout>
-      <div className="space-y-responsive fade-in">
+      <div className="space-y-8 fade-in">
         {/* Welcome Section */}
-        <div className="card p-responsive">
-          <h1 className="text-responsive-2xl font-bold text-gray-900 mb-3 persian-text">
-            خوش آمدید به پنل مدیریت
-          </h1>
-          <p className="text-responsive-base text-gray-600 persian-text leading-relaxed">
-            از این پنل می‌توانید تمام اطلاعات مدرسه را مدیریت کنید و گزارش‌های مفصل دریافت نمایید
-          </p>
+        <div className="bg-gradient-to-l from-blue-700 via-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-sm relative overflow-hidden">
+          <div className="relative z-10 max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-medium mb-3 backdrop-blur-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              سامانه فعال و متصل
+            </span>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight persian-text mb-2">
+              سامانه جامع مدیریت هوشمند مدرسه
+            </h1>
+            <p className="text-sm sm:text-base text-blue-100 font-normal leading-relaxed persian-text">
+              مدیریت و نظارت بر کلاس‌ها، دروس، دانش‌آموزان و کارنامه نمرات ماهانه با بالاترین دقت و سهولت
+            </p>
+          </div>
+          {/* Subtle background decoration */}
+          <div className="absolute left-[-40px] bottom-[-40px] w-64 h-64 rounded-full bg-white/5 pointer-events-none" />
+          <div className="absolute left-20 top-[-20px] w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-responsive">
-          <div className="card card-hover p-responsive">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-600 flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {/* Classes Stat */}
+          <Link href="/admin/classes" className="group">
+            <div className="app-card app-card-interactive p-6 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-slate-500 persian-text">کل کلاس‌ها</span>
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200 border border-blue-100/60">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
               </div>
-              <div className="mr-4 min-w-0">
-                <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل کلاس‌ها</p>
-                <p className="text-responsive-xl font-bold text-gray-900">
-                  {loading ? '...' : stats.classes}
+              <div>
+                <p className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {loading ? (
+                    <span className="inline-block w-8 h-8 bg-slate-200 rounded animate-pulse" />
+                  ) : (
+                    stats.classes
+                  )}
+                </p>
+                <p className="text-xs text-slate-400 mt-1 persian-text flex items-center gap-1 group-hover:text-blue-600 transition-colors">
+                  <span>مشاهده و تنظیم کلاس‌ها</span>
+                  <span className="text-sm">&larr;</span>
                 </p>
               </div>
             </div>
+          </Link>
+
+          {/* Subjects Stat */}
+          <Link href="/admin/subjects" className="group">
+            <div className="app-card app-card-interactive p-6 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-slate-500 persian-text">کل دروس</span>
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200 border border-emerald-100/60">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <p className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {loading ? (
+                    <span className="inline-block w-8 h-8 bg-slate-200 rounded animate-pulse" />
+                  ) : (
+                    stats.subjects
+                  )}
+                </p>
+                <p className="text-xs text-slate-400 mt-1 persian-text flex items-center gap-1 group-hover:text-emerald-600 transition-colors">
+                  <span>مدیریت دروس و تخصیص به پایه</span>
+                  <span className="text-sm">&larr;</span>
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Students Stat */}
+          <Link href="/admin/students" className="group">
+            <div className="app-card app-card-interactive p-6 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-slate-500 persian-text">دانش‌آموزان ثبت‌نامی</span>
+                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform duration-200 border border-indigo-100/60">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <p className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {loading ? (
+                    <span className="inline-block w-8 h-8 bg-slate-200 rounded animate-pulse" />
+                  ) : (
+                    stats.students
+                  )}
+                </p>
+                <p className="text-xs text-slate-400 mt-1 persian-text flex items-center gap-1 group-hover:text-indigo-600 transition-colors">
+                  <span>مشاهده پرونده دانش‌آموزان</span>
+                  <span className="text-sm">&larr;</span>
+                </p>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Quick Actions Grid */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-slate-900 persian-text">
+              دسترسی و عملیات سریع
+            </h2>
           </div>
 
-          <div className="card card-hover p-responsive">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-gradient-to-r from-green-100 to-green-200 text-green-600 flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              href="/admin/grades"
+              className="app-card app-card-interactive p-4.5 flex items-center gap-3.5 group bg-white"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 persian-text group-hover:text-blue-600 transition-colors">
+                  ثبت نمرات ماهانه
+                </p>
+                <p className="text-xs text-slate-500 persian-text truncate">ورود نمرات تکی یا گروهی</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/admin/students"
+              className="app-card app-card-interactive p-4.5 flex items-center gap-3.5 group bg-white"
+            >
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 persian-text group-hover:text-indigo-600 transition-colors">
+                  ثبت دانش‌آموز جدید
+                </p>
+                <p className="text-xs text-slate-500 persian-text truncate">تعریف مشخصات و والدین</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/admin/classes"
+              className="app-card app-card-interactive p-4.5 flex items-center gap-3.5 group bg-white"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 persian-text group-hover:text-amber-600 transition-colors">
+                  تعریف کلاس جدید
+                </p>
+                <p className="text-xs text-slate-500 persian-text truncate">پایه‌ها و گروه‌های درسی</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/admin/subjects"
+              className="app-card app-card-interactive p-4.5 flex items-center gap-3.5 group bg-white"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <div className="mr-4 min-w-0">
-                <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل دروس</p>
-                <p className="text-responsive-xl font-bold text-gray-900">
-                  {loading ? '...' : stats.subjects}
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 persian-text group-hover:text-emerald-600 transition-colors">
+                  افزودن سرفصل درس
                 </p>
+                <p className="text-xs text-slate-500 persian-text truncate">تخصیص به کلاس‌ها</p>
               </div>
-            </div>
-          </div>
-
-          <div className="card card-hover p-responsive">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-600 flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div className="mr-4 min-w-0">
-                <p className="text-responsive-sm font-medium text-gray-600 persian-text truncate">کل دانش‌آموزان</p>
-                <p className="text-responsive-xl font-bold text-gray-900">
-                  {loading ? '...' : stats.students}
-                </p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Quick Actions */}
-        <div className="card p-responsive slide-in">
-          <h2 className="text-responsive-lg font-semibold text-gray-900 mb-responsive persian-text">
-            عملیات سریع
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-responsive">
-            <a
-              href="/admin/classes"
-              className="btn btn-outline group mobile-full-width"
-            >
-              <div className="p-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg text-blue-600 ml-3 group-hover:from-blue-200 group-hover:to-blue-300 transition-all duration-300">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span className="text-responsive-sm font-medium text-gray-900 persian-text">
-                افزودن کلاس جدید
-              </span>
-            </a>
-
-            <a
-              href="/admin/subjects"
-              className="btn btn-outline group mobile-full-width"
-            >
-              <div className="p-2 bg-gradient-to-r from-green-100 to-green-200 rounded-lg text-green-600 ml-3 group-hover:from-green-200 group-hover:to-green-300 transition-all duration-300">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span className="text-responsive-sm font-medium text-gray-900 persian-text">
-                افزودن درس جدید
-              </span>
-            </a>
-
-            <a
-              href="/admin/students"
-              className="btn btn-outline group mobile-full-width"
-            >
-              <div className="p-2 bg-gradient-to-r from-purple-100 to-purple-200 rounded-lg text-purple-600 ml-3 group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span className="text-responsive-sm font-medium text-gray-900 persian-text">
-                افزودن دانش‌آموز جدید
-              </span>
-            </a>
-
-            <a
-              href="/admin/grades"
-              className="btn btn-outline group mobile-full-width"
-            >
-              <div className="p-2 bg-gradient-to-r from-orange-100 to-orange-200 rounded-lg text-orange-600 ml-3 group-hover:from-orange-200 group-hover:to-orange-300 transition-all duration-300">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span className="text-responsive-sm font-medium text-gray-900 persian-text">
-                ثبت نمره جدید
-              </span>
-            </a>
+            </Link>
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="card p-responsive slide-in">
-          <h2 className="text-responsive-lg font-semibold text-gray-900 mb-responsive persian-text">
-            فعالیت‌های اخیر
-          </h2>
-          <div className="space-y-4">
-            <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-              <div className="p-2 bg-blue-100 rounded-full text-blue-600 ml-3">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
+        {/* System & DB Status Overview */}
+        <div className="app-card p-6 bg-white">
+          <h3 className="text-base font-bold text-slate-900 persian-text mb-4">
+            وضعیت زیرساخت و سامانه
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <div>
+                <p className="text-xs text-slate-500 persian-text">پایگاه داده</p>
+                <p className="text-xs font-semibold text-slate-800">Aiven PostgreSQL (متصل و پایدار)</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-responsive-sm font-medium text-gray-900 persian-text">
-                  سیستم آماده استفاده است
-                </p>
-                <p className="text-responsive-xs text-gray-500 persian-text">
-                  برای شروع، از منوی کناری استفاده کنید
-                </p>
+            </div>
+
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              <div>
+                <p className="text-xs text-slate-500 persian-text">درگاه والدین</p>
+                <p className="text-xs font-semibold text-slate-800 persian-text">ورود با کد ملی و رمز عبور فعال</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+              <div>
+                <p className="text-xs text-slate-500 persian-text">فرمت نمره‌دهی</p>
+                <p className="text-xs font-semibold text-slate-800 persian-text">پشتیبانی از نمرات اعشاری و کسری</p>
               </div>
             </div>
           </div>

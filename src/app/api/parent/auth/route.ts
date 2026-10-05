@@ -1,21 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
-import { supabaseAdmin } from '@/lib/supabase';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { query } from '@/lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function POST(request: Request) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Database connection not available' }, { status: 500 });
-    }
-
     const { student_national_id, password } = await request.json();
 
     if (!student_national_id || !password) {
@@ -33,70 +23,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'رمز عبور اشتباه است' }, { status: 401 });
     }
 
-    // Find student
-    const { data: student, error: studentError } = await supabaseAdmin
-      .from('students')
-      .select(`
-        id,
-        full_name,
-        national_id,
-        class_id,
-        parent_id
-      `)
-      .eq('national_id', student_national_id)
-      .single();
+    // Find student and parent
+    const studentRes = await query(
+      `SELECT 
+        s.id,
+        s.full_name,
+        s.national_id,
+        s.class_id,
+        s.parent_id,
+        p.full_name AS parent_name
+       FROM students s
+       LEFT JOIN parents p ON s.parent_id = p.id
+       WHERE s.national_id = $1`,
+      [student_national_id]
+    );
 
-    if (studentError || !student) {
+    if (studentRes.rows.length === 0) {
       return NextResponse.json({ error: 'دانش‌آموز یافت نشد' }, { status: 404 });
     }
 
-    // Find parent
-    const { data: parent, error: parentError } = await supabaseAdmin
-      .from('parents')
-      .select(`
-        id,
-        full_name
-      `)
-      .eq('id', student.parent_id)
-      .single();
+    const student = studentRes.rows[0];
 
-    if (parentError || !parent) {
-      return NextResponse.json({ error: 'اطلاعات والدین یافت نشد' }, { status: 404 });
-    }
+    // واکشی نمرات دانش‌آموز
+    const gradesRes = await query(
+      `SELECT 
+        g.id,
+        g.score,
+        g.month,
+        g.school_year,
+        g.grade_number,
+        g.created_at,
+        CASE 
+          WHEN sub.id IS NOT NULL THEN json_build_object('id', sub.id, 'name', sub.name)
+          ELSE NULL 
+        END AS subject
+       FROM grades g
+       LEFT JOIN subjects sub ON g.subject_id = sub.id
+       WHERE g.student_id = $1
+       ORDER BY g.school_year DESC, g.month DESC, g.grade_number ASC`,
+      [student.id]
+    );
 
-    // مرحله ۵: واکشی نمرات دانش‌آموز
-    const { data: grades, error: gradesError } = await supabase
-      .from('grades')
-      .select(`
-        id,
-        score,
-        month,
-        school_year,
-        created_at,
-        subject:subjects(
-          id,
-          name
-        )
-      `)
-      .eq('student_id', student.id)
-      .order('school_year', { ascending: false })
-      .order('month', { ascending: false });
-
-    if (gradesError) {
-      console.error('Grades fetch error:', gradesError);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'خطا در واکشی نمرات دانش‌آموز' 
-        },
-        { status: 500 }
-      );
-    }
-
-    // مرحله ۶: ایجاد نشست امن
+    // ایجاد نشست امن
     const sessionData = {
-      parent_id: parent.id,
-      parent_name: parent.full_name,
+      parent_id: student.parent_id,
+      parent_name: student.parent_name,
       student_id: student.id,
       student_name: student.full_name,
       student_national_id: student.national_id,
@@ -112,8 +83,8 @@ export async function POST(request: Request) {
       message: 'ورود با موفقیت انجام شد',
       data: {
         parent: {
-          id: parent.id,
-          full_name: parent.full_name
+          id: student.parent_id,
+          full_name: student.parent_name
         },
         student: {
           id: student.id,
@@ -121,7 +92,7 @@ export async function POST(request: Request) {
           national_id: student.national_id,
           class_id: student.class_id
         },
-        grades: grades || []
+        grades: gradesRes.rows || []
       }
     });
 

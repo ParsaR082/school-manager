@@ -45,6 +45,7 @@ export interface Grade {
   subject_id: string;
   month: number;
   school_year: number;
+  grade_number?: number;
   score: number;
   created_by: string;
   created_at: string;

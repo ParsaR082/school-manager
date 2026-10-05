@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { query } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,48 +21,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if supabaseAdmin is available
-    if (!supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    // Find student and parent by national_id
+    const result = await query(
+      `SELECT 
+        s.id,
+        s.full_name,
+        s.national_id,
+        s.parent_id,
+        p.id AS parent_id_val,
+        p.full_name AS parent_full_name
+       FROM students s
+       LEFT JOIN parents p ON s.parent_id = p.id
+       WHERE s.national_id = $1`,
+      [national_id]
+    );
 
-    // Find student by national_id
-    const { data: result, error } = await supabaseAdmin
-      .from('students')
-      .select(`
-        id,
-        full_name,
-        national_id,
-        parent_id,
-        parents (
-          id,
-          full_name
-        )
-      `)
-      .eq('national_id', national_id)
-      .single();
-
-    if (error || !result || !result.parents) {
+    if (result.rows.length === 0) {
       return NextResponse.json(
         { error: 'کد ملی دانش‌آموز صحیح نیست' },
         { status: 401 }
       );
     }
 
-    // Return both parent and student information
+    const row = result.rows[0];
+
     return NextResponse.json({
       success: true,
       parent: {
-        id: result.parents[0].id,
-        full_name: result.parents[0].full_name
+        id: row.parent_id_val,
+        full_name: row.parent_full_name
       },
       student: {
-        id: result.id,
-        full_name: result.full_name,
-        national_id: result.national_id
+        id: row.id,
+        full_name: row.full_name,
+        national_id: row.national_id
       }
     });
 
